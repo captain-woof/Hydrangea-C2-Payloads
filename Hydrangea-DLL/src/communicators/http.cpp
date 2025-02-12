@@ -1,6 +1,6 @@
 #include <Windows.h>
-#include "communicator.h"
-#include "winapi.h"
+#include "communicators/http.h"
+#include "utils/winapi.h"
 
 /* Constructor; for initialisation */
 HttpCommunicator::HttpCommunicator() {

@@ -1,7 +1,7 @@
 #include <Windows.h>
 #include <wininet.h>
-#include "web_requestor.h"
-#include "winapi.h"
+#include "utils/web_requestor.h"
+#include "utils/winapi.h"
 #include "constants.h"
 
 // Constructor

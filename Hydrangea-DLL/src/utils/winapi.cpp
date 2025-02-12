@@ -1,9 +1,9 @@
 #include <windows.h>
 #include <wchar.h>
 #include <winternl.h>
-#include "buffer.h"
+#include "utils/buffer.h"
 #include "constants.h"
-#include "winapi.h"
+#include "utils/winapi.h"
 
 /* Helper methods */
 

@@ -1,7 +1,7 @@
+#include <windows.h>
 #include "export.h"
 #include "main.h"
-#include <windows.h>
-#include "communicator.h"
+#include "communicators/http.h"
 
 /*
 Run() is responsible for starting and coordinating everything; can be called directly
