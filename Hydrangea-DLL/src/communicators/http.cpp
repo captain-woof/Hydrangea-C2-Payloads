@@ -88,25 +88,16 @@ void HttpCommunicator::CommunicateWithListener()
 CLEANUP:
     if (pBufferB64ToSend != NULL)
     {
-        this->pWinApiCustom->loadedFunctions.HeapFree(
-            this->pWinApiCustom->loadedFunctions.GetProcessHeap(),
-            0,
-            pBufferB64ToSend);
+        this->pWinApiCustom->HeapFreeCustom(pBufferB64ToSend);
     }
 
     if (communicationHeaderBuffer != NULL)
     {
-        this->pWinApiCustom->loadedFunctions.HeapFree(
-            this->pWinApiCustom->loadedFunctions.GetProcessHeap(),
-            0,
-            communicationHeaderBuffer);
+        this->pWinApiCustom->HeapFreeCustom(communicationHeaderBuffer);
     }
 
     if (pResponseBuffer != NULL)
     {
-        this->pWinApiCustom->loadedFunctions.HeapFree(
-            this->pWinApiCustom->loadedFunctions.GetProcessHeap(),
-            0,
-            pResponseBuffer);
+        this->pWinApiCustom->HeapFreeCustom(pResponseBuffer);
     }
 }
