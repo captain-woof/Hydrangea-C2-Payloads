@@ -1,23 +1,24 @@
 #pragma once
 #include <Windows.h>
+#include "utils/winapi.h"
+#include "communicators/base.h"
 
 /*
 HTTP Communicator; connects to HTTP Listener
 */
-class HttpCommunicator {
-    private:
-    PCHAR listenerHost;
-    DWORD listenerPort;
-    PCHAR* urlPathChoices; // Array of URL paths to query
+class HttpCommunicator : public BaseCommunicator
+{
+private:
+    PCHAR pUrlPathChoices; // Array of URL paths to query
+    DWORD urlPathChoicesNum; // Num of URL paths to query
+    DWORD lastUrlPathChoiceIndex; // Index of last URL path that was queried
 
-    public:
+public:
     /* Constructor; for initialisation */
-    HttpCommunicator();
-    //HttpCommunicator(PCHAR host, DWORD port, PCHAR* urlPathChoices);
+    HttpCommunicator(WinApiCustom *pWinApiCustom, PCHAR host, DWORD port, PCHAR pUrlPathChoices, PCHAR agentId);
 
     /* Destructor; for cleanup */
     ~HttpCommunicator();
 
-    /* Get tasks from listener */
-    void GetTasks();
+    void CommunicateWithListener() override;
 };

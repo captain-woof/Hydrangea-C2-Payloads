@@ -177,6 +177,12 @@ WinApiCustom::WinApiCustom()
 		STRING_WININET_DLL_LEN,
 		strWininetDll);
 
+	static CHAR strBcryptDll[STRING_BCRYPT_DLL_LEN + 1] = ""; // "Bcrypt.dll"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_BCRYPT_DLL,
+		STRING_BCRYPT_DLL_LEN,
+		strBcryptDll);
+
 	// Get necessary strings for functions
 	static CHAR strMessageBoxA[STRING_MESSAGEBOX_A_LEN + 1] = ""; // "MessageBoxA"
 	DeobfuscateUtf8String(
@@ -256,16 +262,41 @@ WinApiCustom::WinApiCustom()
 		STRING_HEAP_RE_ALLOC_LEN,
 		strHeapReAlloc);
 
+	static CHAR strHeapFree[STRING_HEAP_FREE_LEN + 1] = ""; // "HeapFree"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_HEAP_FREE,
+		STRING_HEAP_FREE_LEN,
+		strHeapFree);
+
 	static CHAR strGetLastError[STRING_GET_LAST_ERROR_LEN + 1] = ""; // "GetLastError"
 	DeobfuscateUtf8String(
 		(PCHAR)STRING_GET_LAST_ERROR,
 		STRING_GET_LAST_ERROR_LEN,
 		strGetLastError);
 
+	static CHAR strBCryptOpenAlgorithmProvider[STRING_BCRYPT_OPEN_ALGORITHM_PROVIDER_LEN + 1] = ""; // "BCryptOpenAlgorithmProvider"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_BCRYPT_OPEN_ALGORITHM_PROVIDER,
+		STRING_BCRYPT_OPEN_ALGORITHM_PROVIDER_LEN,
+		strBCryptOpenAlgorithmProvider);
+
+	static CHAR strBCryptCloseAlgorithmProvider[STRING_BCRYPT_CLOSE_ALGORITHM_PROVIDER_LEN + 1] = ""; // "BCryptCloseAlgorithmProvider"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_BCRYPT_CLOSE_ALGORITHM_PROVIDER,
+		STRING_BCRYPT_CLOSE_ALGORITHM_PROVIDER_LEN,
+		strBCryptCloseAlgorithmProvider);
+
+	static CHAR strBCryptGenRandom[STRING_BCRYPT_GEN_RANDOM_LEN + 1] = ""; // "BCryptGenRandom"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_BCRYPT_GEN_RANDOM,
+		STRING_BCRYPT_GEN_RANDOM_LEN,
+		strBCryptGenRandom);
+
 	// Load necessary modules
 	loadedModules.hKernel32 = LoadLibraryCustom(strKernel32Dll);
 	loadedModules.hUser32 = LoadLibraryCustom(strUser32Dll);
 	loadedModules.hWininet = LoadLibraryCustom(strWininetDll);
+	loadedModules.hBcrypt = LoadLibraryCustom(strBcryptDll);
 
 	// Load necessary functions
 	loadedFunctions.MessageBoxA = (int (*)(HWND, LPCSTR, LPCSTR, UINT))GetProcAddressCustom(loadedModules.hUser32, strMessageBoxA);
@@ -281,12 +312,47 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.GetProcessHeap = (HANDLE(*)())GetProcAddressCustom(loadedModules.hKernel32, strGetProcessHeap);
 	loadedFunctions.HeapAlloc = (LPVOID(*)(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes))GetProcAddressCustom(loadedModules.hKernel32, strHeapAlloc);
 	loadedFunctions.HeapReAlloc = (LPVOID(*)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes))GetProcAddressCustom(loadedModules.hKernel32, strHeapReAlloc);
+	loadedFunctions.HeapFree = (BOOL(*)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem))GetProcAddressCustom(loadedModules.hKernel32, strHeapFree);
 	loadedFunctions.GetLastError = (DWORD(*)())GetProcAddressCustom(loadedModules.hKernel32, strGetLastError);
+	loadedFunctions.BCryptOpenAlgorithmProvider = (NTSTATUS(*)(BCRYPT_ALG_HANDLE * phAlgorithm, LPCWSTR pszAlgId, LPCWSTR pszImplementation, ULONG dwFlags)) GetProcAddressCustom(loadedModules.hBcrypt, strBCryptOpenAlgorithmProvider);
+	loadedFunctions.BCryptCloseAlgorithmProvider = (NTSTATUS(*)(BCRYPT_ALG_HANDLE hAlgorithm, ULONG dwFlags))GetProcAddressCustom(loadedModules.hBcrypt, strBCryptCloseAlgorithmProvider);
+	loadedFunctions.BCryptGenRandom = (NTSTATUS(*)(BCRYPT_ALG_HANDLE hAlgorithm, PUCHAR pbBuffer, ULONG cbBuffer, ULONG dwFlags))GetProcAddressCustom(loadedModules.hBcrypt, strBCryptGenRandom);
 }
 
+/* Destructor for WinApiCustom */
 WinApiCustom::~WinApiCustom()
 {
 	// Free library (modules)
-	// FreeLibraryCustom(loadedModules.hKernel32);
+	// FreeLibraryCustom(loadedModules.hKernel32); TODO
 	FreeLibraryCustom(loadedModules.hUser32);
+}
+
+/* WRAPPER FUNCTIONS FOR WinApiCustom */
+
+// Custom heap alloc
+LPVOID WinApiCustom::HeapAllocCustom(DWORD sizeOfBufferToAllocate)
+{
+	return this->loadedFunctions.HeapAlloc(
+		this->loadedFunctions.GetProcessHeap(),
+		HEAP_ZERO_MEMORY,
+		sizeOfBufferToAllocate);
+}
+
+// Custom heap free
+BOOL WinApiCustom::HeapFreeCustom(LPVOID pBufferToFree)
+{
+	return this->loadedFunctions.HeapFree(
+		this->loadedFunctions.GetProcessHeap(),
+		0,
+		pBufferToFree);
+}
+
+// Custom Heap realloc
+LPVOID WinApiCustom::HeapReAllocCustom(LPVOID lpMem, DWORD dwBytes)
+{
+	return this->loadedFunctions.HeapReAlloc(
+		this->loadedFunctions.GetProcessHeap(),
+		HEAP_ZERO_MEMORY,
+		lpMem,
+		dwBytes);
 }

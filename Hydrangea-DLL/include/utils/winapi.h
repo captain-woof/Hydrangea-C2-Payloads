@@ -22,6 +22,7 @@ struct LoadedModules
     HMODULE hKernel32;
     HMODULE hUser32;
     HMODULE hWininet;
+    HMODULE hBcrypt;
 };
 
 /* Struct to store pointers to Functions */
@@ -40,16 +41,30 @@ struct LoadedFunctions
     HANDLE (*GetProcessHeap)();
     LPVOID (*HeapAlloc)(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
     LPVOID (*HeapReAlloc)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes);
+    BOOL (*HeapFree)(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
     DWORD (*GetLastError)();
+    NTSTATUS (*BCryptOpenAlgorithmProvider)(BCRYPT_ALG_HANDLE *phAlgorithm, LPCWSTR pszAlgId, LPCWSTR pszImplementation, ULONG dwFlags);
+    NTSTATUS (*BCryptCloseAlgorithmProvider)(BCRYPT_ALG_HANDLE hAlgorithm, ULONG dwFlags);
+    NTSTATUS (*BCryptGenRandom)(BCRYPT_ALG_HANDLE hAlgorithm, PUCHAR pbBuffer, ULONG cbBuffer, ULONG dwFlags);
 };
 
 /* Class for WinAPI functions */
 class WinApiCustom
 {
 public:
+    /* Constructoe and destructor */
+
     WinApiCustom();
     ~WinApiCustom();
 
+    /* Loaded modules and their functions */
+
     LoadedModules loadedModules;
     LoadedFunctions loadedFunctions;
+
+    /* Wrapper methods */
+
+    LPVOID HeapAllocCustom(DWORD sizeOfBufferToAllocate);
+    BOOL HeapFreeCustom(LPVOID pBufferToFree);
+    LPVOID WinApiCustom::HeapReAllocCustom(LPVOID lpMem, DWORD dwBytes);
 };

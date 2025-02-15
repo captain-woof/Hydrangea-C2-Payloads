@@ -1,14 +1,14 @@
 #include <windows.h>
 #include "export.h"
 #include "main.h"
-#include "communicators/http.h"
+#include "runner/runner.h"
 
 /*
 Run() is responsible for starting and coordinating everything; can be called directly
 */
 EXPORT_FUNC void Run() {
-    HttpCommunicator communicator;
-    communicator.GetTasks();
+    Runner runner;
+    runner.Run();
 }
 
 /*
