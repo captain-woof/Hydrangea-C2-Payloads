@@ -19,6 +19,7 @@ DWORD FreeLibraryCustom(IN HMODULE *phModule);
 /* Structs to store pointers to Modules */
 struct LoadedModules
 {
+    HMODULE hNtdll;
     HMODULE hKernel32;
     HMODULE hUser32;
     HMODULE hWininet;
@@ -46,6 +47,11 @@ struct LoadedFunctions
     NTSTATUS (*BCryptOpenAlgorithmProvider)(BCRYPT_ALG_HANDLE *phAlgorithm, LPCWSTR pszAlgId, LPCWSTR pszImplementation, ULONG dwFlags);
     NTSTATUS (*BCryptCloseAlgorithmProvider)(BCRYPT_ALG_HANDLE hAlgorithm, ULONG dwFlags);
     NTSTATUS (*BCryptGenRandom)(BCRYPT_ALG_HANDLE hAlgorithm, PUCHAR pbBuffer, ULONG cbBuffer, ULONG dwFlags);
+    HANDLE (*CreateThread)(LPSECURITY_ATTRIBUTES lpThreadAttributes, DWORD dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
+    HANDLE (*CreateMutexA)(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName);
+    DWORD (*WaitForSingleObject)(HANDLE hHandle, DWORD dwMilliseconds);
+    BOOL (*ReleaseMutex)(HANDLE hMutex);
+    BOOL (*CloseHandle)(HANDLE hObject);
 };
 
 /* Class for WinAPI functions */
@@ -66,5 +72,7 @@ public:
 
     LPVOID HeapAllocCustom(DWORD sizeOfBufferToAllocate);
     BOOL HeapFreeCustom(LPVOID pBufferToFree);
-    LPVOID WinApiCustom::HeapReAllocCustom(LPVOID lpMem, DWORD dwBytes);
+    LPVOID HeapReAllocCustom(LPVOID lpMem, DWORD dwBytes);
+    HANDLE CreateThreadCustom(LPTHREAD_START_ROUTINE pThreadFunc, LPVOID pThreadFuncParams);
+    HANDLE CreateMutexCustom();
 };

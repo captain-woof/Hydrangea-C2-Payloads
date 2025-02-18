@@ -50,8 +50,8 @@ BOOL RandomGenerator::GenerateRandomBytes(IN DWORD numOfBytes, OUT LPVOID pBuffe
 
 /*
 Generate random string
-numOfChars: Number of random bytes to generate
-pBuffer: Buffer that would receive the random bytes; needs to be preallocated
+numOfChars: Number of random characters to generate
+pBuffer: Buffer that would receive the random characters; needs to be preallocated with (numOfChars + 1) space
 */
 BOOL RandomGenerator::GenerateRandomStr(IN DWORD numOfChars, OUT LPVOID pBuffer)
 {
@@ -91,6 +91,9 @@ BOOL RandomGenerator::GenerateRandomStr(IN DWORD numOfChars, OUT LPVOID pBuffer)
                 }
             }
         }
+
+        // Add null termination byte
+        ((PBYTE)pBuffer)[numOfChars] = 0;
 
         // Cleanup heap
         this->pWinApiCustom->HeapFreeCustom(randomBytes);

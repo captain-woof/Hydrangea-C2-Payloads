@@ -5,6 +5,23 @@
 #include "utils/buffer.h"
 #include "utils/winapi.h"
 
+/*
+Compares two buffers to check if they are equal
+
+Returns TRUE if buffers are equal
+*/
+BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD numOfBytesToCompare)
+{
+    for (int i = 0; i < numOfBytesToCompare; i++)
+    {
+        if (((PBYTE)pBuffer1)[i] != ((PBYTE)pBuffer2)[i])
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 /* Copy contents of one buffer into another */
 void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD numBytesToCopy)
 {

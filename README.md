@@ -43,31 +43,34 @@ AGENT_REGISTER-123ABC
 
 ### 2. Listener responds
 
-Since there are no new tasks on Listener (because this Agent just registered now), Listener responds with no new Task.
+Listener confirms registration.
 
 ```
-TASK-NONE
+REGISTERED-123ABC
 ```
 
 ### 3. Agent submits previous Tasks output (if exists), new Agents that joined (if exists), AND requests for new Tasks
+
+If there is something for output:
 
 ```
 TASK_OUTPUT-12-base64(output)
 TASK_OUTPUT-13-base64(output)
 SUBAGENT_REGISTER-456DEF
-GET_TASKS-123ABC-456DEF
+GET_TASKS-123ABC
+GET_TASKS-456DEF
 ```
 
 ### 4. Listener responds with new Tasks
 
-If new tasks exist
+If new tasks exist:
 
 ```
 TASK-14-123ABC-base64(input)
 TASK-15-456DEF-base64(input)
 ```
 
-If new tasks don't exist
+If new tasks don't exist:
 
 ```
 TASK-NONE

@@ -5,6 +5,9 @@
 #include "constants.h"
 #include "utils/winapi.h"
 
+/* Global */
+HMODULE hNtdll = NULL;
+
 /* Helper methods */
 
 HMODULE GetModuleHandleCustom(PCHAR moduleName)
@@ -56,6 +59,9 @@ HMODULE GetModuleHandleCustom(PCHAR moduleName)
 
 PVOID GetProcAddressCustom(HMODULE hModule, PCHAR procName)
 {
+	// Get length of Procedure name
+	DWORD procNameSize = StrLen(procName);
+
 	// Get export data directory
 	PBYTE pModuleBase = (PBYTE)hModule;
 	PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)hModule;
@@ -64,13 +70,32 @@ PVOID GetProcAddressCustom(HMODULE hModule, PCHAR procName)
 	PDWORD pAddressOfNames = (PDWORD)(pModuleBase + (pDirectoryExport->AddressOfNames));
 	PWORD pAddressOfOrdinals = (PWORD)(pModuleBase + (pDirectoryExport->AddressOfNameOrdinals));
 	PDWORD pAddressOfFunctions = (PDWORD)(pModuleBase + (pDirectoryExport->AddressOfFunctions));
+	PVOID pProc = NULL;
+
+	// Prepare strings for forwarded functions check
+	CHAR strNtdllDot[STRING_NTDLL_DOT_LEN + 1] = "";
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_NTDLL_DOT,
+		STRING_NTDLL_DOT_LEN,
+		strNtdllDot);
 
 	for (int i = 0; i < pDirectoryExport->NumberOfNames; i++)
 	{
 		PCHAR procNameCurr = (PCHAR)pModuleBase + pAddressOfNames[i];
-		if (strcmp(procNameCurr, procName) == 0)
+
+		if (CompareBuffer(procNameCurr, procName, procNameSize))
 		{
-			return (PVOID)(pModuleBase + pAddressOfFunctions[pAddressOfOrdinals[i]]);
+			pProc = (PVOID)(pModuleBase + pAddressOfFunctions[pAddressOfOrdinals[i]]);
+
+			// Check for forwarded function; if found, resolve it recursively
+			if (CompareBuffer(pProc, strNtdllDot, STRING_NTDLL_DOT_LEN))
+			{
+				return GetProcAddressCustom(hNtdll, (PCHAR)pProc + STRING_NTDLL_DOT_LEN);
+			}
+
+			// If not a forwarded function, return found pointer directly
+			else
+				return pProc;
 		}
 	}
 
@@ -159,6 +184,12 @@ DWORD FreeLibraryCustom(IN HMODULE hModule)
 WinApiCustom::WinApiCustom()
 {
 	// Get necessary strings for modules
+	static CHAR strNtdllDll[STRING_NTDLL_DLL_LEN + 1] = ""; // "ntdll.dll"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_NTDLL_DLL,
+		STRING_NTDLL_DLL_LEN,
+		strNtdllDll);
+
 	static CHAR strKernel32Dll[STRING_KERNEL32_DLL_LEN + 1] = ""; // "Kernel32.dll"
 	DeobfuscateUtf8String(
 		(PCHAR)STRING_KERNEL32_DLL,
@@ -292,11 +323,45 @@ WinApiCustom::WinApiCustom()
 		STRING_BCRYPT_GEN_RANDOM_LEN,
 		strBCryptGenRandom);
 
+	static CHAR strCreateThread[STRING_CREATE_THREAD_LEN + 1] = ""; // "CreateThread"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_CREATE_THREAD,
+		STRING_CREATE_THREAD_LEN,
+		strCreateThread);
+
+	static CHAR strCreateMutexA[STRING_CREATE_MUTEX_A_LEN + 1] = ""; // "CreateMutexA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_CREATE_MUTEX_A,
+		STRING_CREATE_MUTEX_A_LEN,
+		strCreateMutexA);
+
+	static CHAR strWaitForSingleObject[STRING_WAIT_FOR_SINGLE_OBJECT_LEN + 1] = ""; // "WaitForSingleObject"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_WAIT_FOR_SINGLE_OBJECT,
+		STRING_WAIT_FOR_SINGLE_OBJECT_LEN,
+		strWaitForSingleObject);
+
+	static CHAR strReleaseMutex[STRING_RELEASE_MUTEX_LEN + 1] = ""; // "ReleaseMutex"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_RELEASE_MUTEX,
+		STRING_RELEASE_MUTEX_LEN,
+		strReleaseMutex);
+
+	static CHAR strCloseHandle[STRING_CLOSE_HANDLE_LEN + 1] = ""; // "CloseHandle"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_CLOSE_HANDLE,
+		STRING_CLOSE_HANDLE_LEN,
+		strCloseHandle);
+
 	// Load necessary modules
+	loadedModules.hNtdll = LoadLibraryCustom(strNtdllDll);
 	loadedModules.hKernel32 = LoadLibraryCustom(strKernel32Dll);
 	loadedModules.hUser32 = LoadLibraryCustom(strUser32Dll);
 	loadedModules.hWininet = LoadLibraryCustom(strWininetDll);
 	loadedModules.hBcrypt = LoadLibraryCustom(strBcryptDll);
+
+	// Save necessary global module handles
+	hNtdll = loadedModules.hNtdll;
 
 	// Load necessary functions
 	loadedFunctions.MessageBoxA = (int (*)(HWND, LPCSTR, LPCSTR, UINT))GetProcAddressCustom(loadedModules.hUser32, strMessageBoxA);
@@ -317,6 +382,11 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.BCryptOpenAlgorithmProvider = (NTSTATUS(*)(BCRYPT_ALG_HANDLE * phAlgorithm, LPCWSTR pszAlgId, LPCWSTR pszImplementation, ULONG dwFlags)) GetProcAddressCustom(loadedModules.hBcrypt, strBCryptOpenAlgorithmProvider);
 	loadedFunctions.BCryptCloseAlgorithmProvider = (NTSTATUS(*)(BCRYPT_ALG_HANDLE hAlgorithm, ULONG dwFlags))GetProcAddressCustom(loadedModules.hBcrypt, strBCryptCloseAlgorithmProvider);
 	loadedFunctions.BCryptGenRandom = (NTSTATUS(*)(BCRYPT_ALG_HANDLE hAlgorithm, PUCHAR pbBuffer, ULONG cbBuffer, ULONG dwFlags))GetProcAddressCustom(loadedModules.hBcrypt, strBCryptGenRandom);
+	loadedFunctions.CreateThread = (HANDLE(*)(LPSECURITY_ATTRIBUTES lpThreadAttributes, DWORD dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId))GetProcAddressCustom(loadedModules.hKernel32, strCreateThread);
+	loadedFunctions.CreateMutexA = (HANDLE(*)(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName))GetProcAddressCustom(loadedModules.hKernel32, strCreateMutexA);
+	loadedFunctions.WaitForSingleObject = (DWORD(*)(HANDLE hHandle, DWORD dwMilliseconds))GetProcAddressCustom(loadedModules.hKernel32, strWaitForSingleObject);
+	loadedFunctions.ReleaseMutex = (BOOL(*)(HANDLE hMutex))GetProcAddressCustom(loadedModules.hKernel32, strReleaseMutex);
+	loadedFunctions.CloseHandle = (BOOL(*)(HANDLE hObject))GetProcAddressCustom(loadedModules.hKernel32, strCloseHandle);
 }
 
 /* Destructor for WinApiCustom */
@@ -355,4 +425,22 @@ LPVOID WinApiCustom::HeapReAllocCustom(LPVOID lpMem, DWORD dwBytes)
 		HEAP_ZERO_MEMORY,
 		lpMem,
 		dwBytes);
+}
+
+// Custom CreateThread
+HANDLE WinApiCustom::CreateThreadCustom(LPTHREAD_START_ROUTINE pThreadFunc, LPVOID pThreadFuncParams)
+{
+	return this->loadedFunctions.CreateThread(
+		NULL,
+		0,
+		pThreadFunc,
+		pThreadFuncParams,
+		0,
+		NULL);
+}
+
+// Custom CreateMutex
+HANDLE WinApiCustom::CreateMutexCustom()
+{
+	return this->loadedFunctions.CreateMutexA(NULL, FALSE, NULL);
 }
