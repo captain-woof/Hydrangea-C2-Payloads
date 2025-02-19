@@ -13,3 +13,5 @@ DWORD NullSeparatedArrayNumOfStringElements(PCHAR pNullSeparatedArray);
 PCHAR NullSeparatedArrayStringAt(PCHAR pNullSeparatedArray, DWORD index);
 void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD numBytesToCopy);
 DWORD StringSearchSubstring(PCHAR substringToSearch, PCHAR stringToSearchIn);
+DWORD GenericSeparatedArrayNumOfStringElements(IN PCHAR pGenericSeparatedArray, IN PCHAR pSeparator);
+BOOL GenericSeparatedArrayStringAt(IN PCHAR pString, IN PCHAR pSeparator, IN DWORD index, OUT PCHAR pOutBuffer, OUT PDWORD pOutBufferSize);

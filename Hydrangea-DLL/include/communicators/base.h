@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include "utils/winapi.h"
 #include "utils/queue.h"
+#include "utils/event.h"
 
 /* Struct to store */
 struct BaseCommunicatorThreadArgs
@@ -12,6 +13,8 @@ struct BaseCommunicatorThreadArgs
     PCHAR agentId;
     Queue *pTaskInputQueue;
     Queue *pTaskOutputQueue;
+    Event *pEventRegister;
+    Event *pEventAgentShouldStop;
 };
 
 /*
@@ -28,13 +31,15 @@ protected:
     PCHAR agentId;
     Queue *pTaskInputQueue;
     Queue *pTaskOutputQueue;
+    Event *pEventRegister;        // Set when agent has successfully registered with Listener
+    Event *pEventAgentShouldStop; // Set when agent should stop
 
     /* Starts and maintains communication with Listener; invoked internally by StartCommunicatorThread() */
     virtual void StartCommunication();
 
 public:
     /* Constructor; for initialisation */
-    BaseCommunicator(WinApiCustom *pWinApiCustom, PCHAR host, DWORD port, PCHAR agentId, Queue *pTaskInputQueue, Queue *pTaskOutputQueue);
+    BaseCommunicator(WinApiCustom *pWinApiCustom, PCHAR host, DWORD port, PCHAR agentId, Queue *pTaskInputQueue, Queue *pTaskOutputQueue, Event *pEventRegister, Event *pEventAgentShouldStop);
 
     /* Destructor; for cleanup */
     virtual ~BaseCommunicator();
@@ -57,10 +62,10 @@ public:
 
     /*
     Processes response from Listener; this should be used after CommunicateWithListener()
-    
+
     This function does:
     1. Processes pResponseData to append to TaskInputQueue, by creating space (heap) for each Task and copying it to the space
-    
+
     This function does not:
     1. Free up `pResponseData`; need to do it explicitly
     */

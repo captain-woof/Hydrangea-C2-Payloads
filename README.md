@@ -66,12 +66,25 @@ GET_TASKS-456DEF
 If new tasks exist:
 
 ```
-TASK-14-123ABC-base64(input)
-TASK-15-456DEF-base64(input)
+TASK-123ABC-14-base64(input)
+TASK-456DEF-15-base64(input)
 ```
 
 If new tasks don't exist:
 
 ```
 TASK-NONE
+```
+
+## Capabilities
+
+Agent capabilities are things that they can be tasked with. These must be invoked from the Hydrangea Client.
+
+The Client formats these commands to be null-separated. This allows individual parameters to have any special characters, including ", ', space, etc.
+
+### Windows
+
+```
+EXIT
+MESSAGEBOX TITLE BODY
 ```

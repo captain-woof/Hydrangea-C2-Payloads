@@ -353,6 +353,24 @@ WinApiCustom::WinApiCustom()
 		STRING_CLOSE_HANDLE_LEN,
 		strCloseHandle);
 
+	static CHAR strCreateEventA[STRING_CREATE_EVENT_A_LEN + 1] = ""; // "CreateEventA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_CREATE_EVENT_A,
+		STRING_CREATE_EVENT_A_LEN,
+		strCloseHandle);
+
+	static CHAR strSetEvent[STRING_SET_EVENT_LEN + 1] = ""; // "SetEvent"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_SET_EVENT,
+		STRING_SET_EVENT_LEN,
+		strCloseHandle);
+
+	static CHAR strResetEvent[STRING_RESET_EVENT_LEN + 1] = ""; // "ResetEvent"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_RESET_EVENT,
+		STRING_RESET_EVENT_LEN,
+		strCloseHandle);
+
 	// Load necessary modules
 	loadedModules.hNtdll = LoadLibraryCustom(strNtdllDll);
 	loadedModules.hKernel32 = LoadLibraryCustom(strKernel32Dll);
@@ -387,6 +405,9 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.WaitForSingleObject = (DWORD(*)(HANDLE hHandle, DWORD dwMilliseconds))GetProcAddressCustom(loadedModules.hKernel32, strWaitForSingleObject);
 	loadedFunctions.ReleaseMutex = (BOOL(*)(HANDLE hMutex))GetProcAddressCustom(loadedModules.hKernel32, strReleaseMutex);
 	loadedFunctions.CloseHandle = (BOOL(*)(HANDLE hObject))GetProcAddressCustom(loadedModules.hKernel32, strCloseHandle);
+	loadedFunctions.CreateEventA = (HANDLE(*)(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName))GetProcAddressCustom(loadedModules.hKernel32, strCreateEventA);
+	loadedFunctions.SetEvent = (BOOL(*)(HANDLE hEvent))GetProcAddressCustom(loadedModules.hKernel32, strSetEvent);
+	loadedFunctions.ResetEvent = (BOOL(*)(HANDLE hEvent))GetProcAddressCustom(loadedModules.hKernel32, strResetEvent);
 }
 
 /* Destructor for WinApiCustom */

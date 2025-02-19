@@ -52,6 +52,9 @@ struct LoadedFunctions
     DWORD (*WaitForSingleObject)(HANDLE hHandle, DWORD dwMilliseconds);
     BOOL (*ReleaseMutex)(HANDLE hMutex);
     BOOL (*CloseHandle)(HANDLE hObject);
+    HANDLE(*CreateEventA)(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName);
+    BOOL (*SetEvent)(HANDLE hEvent);
+    BOOL (*ResetEvent)(HANDLE hEvent);
 };
 
 /* Class for WinAPI functions */

@@ -347,3 +347,100 @@ PCHAR NullSeparatedArrayStringAt(PCHAR pNullSeparatedArray, DWORD index)
     // If execution reaches here, it means result was not found
     return NULL;
 }
+
+/*
+Split a string by separator, and count number of individual string elements
+
+pString: String to split
+pSeparator: String to use as separator; must be only one character
+*/
+DWORD GenericSeparatedArrayNumOfStringElements(IN PCHAR pString, IN PCHAR pSeparator)
+{
+    DWORD strLen = StrLen(pString);
+
+    if (strLen == 0)
+        return 0;
+
+    if (StrLen(pSeparator) != 1)
+        return 0;
+
+    DWORD count = 1;
+    for (int i = 0; i < strLen; i++)
+    {
+        if (pString[i] == pSeparator[0])
+        {
+            ++count;
+        }
+    }
+
+    return count;
+}
+
+/*
+Split a string by separator, and return individual string element at index
+
+pString: String to split
+pSeparator: String to use as separator; must be only one character
+index: Index of the element to copy into output buffer
+pOutBuffer: Output buffer in which to copy element; if NULL returns the size of buffer required in pOutBufferSize (excluding null termination byte)
+pOutBufferSize: Size of above output buffer
+*/
+BOOL GenericSeparatedArrayStringAt(IN PCHAR pString, IN PCHAR pSeparator, IN DWORD index, OUT PCHAR pOutBuffer, OUT PDWORD pOutBufferSize)
+{
+    if (StrLen(pSeparator) != 1)
+        return FALSE;
+
+    DWORD strLen = StrLen(pString);
+    if (strLen == 0)
+        return FALSE;
+
+    DWORD startIndex = 0;
+    DWORD endIndex = strLen - 1;
+
+    // Find starting index
+    if (index != 0)
+    {
+        DWORD count = 0;
+        for (int i = 0; i < strLen; i++)
+        {
+            if (pString[i] == pSeparator[0])
+            {
+                ++count;
+            }
+
+            if (count == index)
+            {
+                startIndex = i + 1;
+                break;
+            }
+        }
+
+        if (count > index)
+        {
+            return FALSE;
+        }
+    }
+
+    // Find ending index
+    for (int i = startIndex; i < strLen; i++)
+    {
+        if (pString[i] == pSeparator[0])
+        {
+            endIndex = i - 1;
+            break;
+        }
+    }
+
+    // If output buffer is null, return the buffer size needed to hold correct data
+    if (pOutBuffer == NULL)
+    {
+        *pOutBufferSize = endIndex - startIndex + 1;
+    }
+    // Else, copy into output buffer
+    else
+    {
+        CopyBuffer(pOutBuffer, (pString + startIndex), (endIndex - startIndex + 1));
+    }
+
+    return TRUE;
+}
