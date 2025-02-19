@@ -10,6 +10,7 @@ private:
     HANDLE hEvent;
 
 public:
+    Event();
     Event(WinApiCustom *pWinApiCustom);
     ~Event();
     BOOL Set();

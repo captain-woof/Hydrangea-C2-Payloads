@@ -2,6 +2,9 @@
 #include "utils/winapi.h"
 #include "utils/queue.h"
 
+// Default constructor
+Queue::Queue() {}
+
 // Constructor
 Queue::Queue(WinApiCustom *pWinApiCustom, BOOL shareWithThreads)
     : pWinApiCustom(pWinApiCustom),

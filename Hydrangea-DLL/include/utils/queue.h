@@ -21,6 +21,7 @@ private:
     HANDLE hMutex; // For threads using this queue
 
 public:
+    Queue();
     Queue(WinApiCustom *pWinApiCustom, BOOL shareWithThreads);
     ~Queue();
 

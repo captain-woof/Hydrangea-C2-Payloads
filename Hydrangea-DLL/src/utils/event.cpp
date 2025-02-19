@@ -1,6 +1,8 @@
 #include "utils/event.h"
 #include "utils/winapi.h"
 
+Event::Event() {}
+
 Event::Event(WinApiCustom *pWinApiCustom)
     : pWinApiCustom(pWinApiCustom),
       hEvent(NULL)

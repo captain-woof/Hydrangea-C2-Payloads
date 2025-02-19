@@ -195,8 +195,6 @@ Enqueues Task output in global Task output queue
 */
 void Executor::SetOutputInOutputQueue(IN PCHAR taskId, IN PCHAR taskOutput, BOOL shouldFreeTaskOutputBuffer)
 {
-    // TASK_OUTPUT-12-base64(output)
-
     // Get Task ID length
     DWORD taskIdLen = StrLen(taskId);
 
