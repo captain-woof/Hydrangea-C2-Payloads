@@ -38,7 +38,7 @@ Subagent ("456DEF") was previously tasked with Task 13, and below shows it sendi
 ### 1. Agent registers itself on Listener with its ID
 
 ```
-AGENT_REGISTER-123ABC
+AGENT_REGISTER-123ABC-HOSTNAME-USERNAME
 ```
 
 ### 2. Listener responds
@@ -49,6 +49,8 @@ Listener confirms registration.
 REGISTERED-123ABC
 ```
 
+In case of failure, no message is returned from Listener.
+
 ### 3. Agent submits previous Tasks output (if exists), new Agents that joined (if exists), AND requests for new Tasks
 
 If there is something for output:
@@ -56,7 +58,7 @@ If there is something for output:
 ```
 TASK_OUTPUT-12-base64(output)
 TASK_OUTPUT-13-base64(output)
-SUBAGENT_REGISTER-456DEF
+SUBAGENT_REGISTER-456DEF-HOSTNAME-USERNAME
 GET_TASKS-123ABC
 GET_TASKS-456DEF
 ```
@@ -70,11 +72,7 @@ TASK-123ABC-14-base64(input)
 TASK-456DEF-15-base64(input)
 ```
 
-If new tasks don't exist:
-
-```
-TASK-NONE
-```
+If new tasks don't exist, no message is returned from Listener.
 
 ## Capabilities
 
