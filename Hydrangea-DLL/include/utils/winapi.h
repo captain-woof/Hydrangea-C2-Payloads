@@ -1,8 +1,12 @@
 #pragma once
+
+#define SECURITY_WIN32
+
 #include <windows.h>
 #include <wchar.h>
 #include <winternl.h>
 #include <wininet.h>
+#include <Security.h>
 #include "buffer.h"
 #include "constants.h"
 
@@ -14,7 +18,7 @@ PVOID GetProcAddressCustom(HMODULE hModule, PCHAR procName);
 
 HMODULE LoadLibraryCustom(IN PCHAR moduleName);
 
-DWORD FreeLibraryCustom(IN HMODULE *phModule);
+DWORD FreeLibraryCustom(IN HMODULE hModule);
 
 /* Structs to store pointers to Modules */
 struct LoadedModules
@@ -24,6 +28,7 @@ struct LoadedModules
     HMODULE hUser32;
     HMODULE hWininet;
     HMODULE hBcrypt;
+    HMODULE hSecur32;
 };
 
 /* Struct to store pointers to Functions */
@@ -52,9 +57,11 @@ struct LoadedFunctions
     DWORD (*WaitForSingleObject)(HANDLE hHandle, DWORD dwMilliseconds);
     BOOL (*ReleaseMutex)(HANDLE hMutex);
     BOOL (*CloseHandle)(HANDLE hObject);
-    HANDLE(*CreateEventA)(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName);
+    HANDLE (*CreateEventA)(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName);
     BOOL (*SetEvent)(HANDLE hEvent);
     BOOL (*ResetEvent)(HANDLE hEvent);
+    BOOLEAN (*GetUserNameExA)(IN EXTENDED_NAME_FORMAT NameFormat, OUT LPSTR lpNameBuffer, IN OUT PULONG nSize);
+    BOOL (*GetComputerNameExA)(IN COMPUTER_NAME_FORMAT NameType, OUT LPSTR lpBuffer, IN OUT LPDWORD nSize);
 };
 
 /* Class for WinAPI functions */
@@ -78,4 +85,6 @@ public:
     LPVOID HeapReAllocCustom(LPVOID lpMem, DWORD dwBytes);
     HANDLE CreateThreadCustom(LPTHREAD_START_ROUTINE pThreadFunc, LPVOID pThreadFuncParams);
     HANDLE CreateMutexCustom();
+    LPVOID GetUserNameCustom();
+    LPVOID GetFQDNComputer();
 };

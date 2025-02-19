@@ -214,6 +214,12 @@ WinApiCustom::WinApiCustom()
 		STRING_BCRYPT_DLL_LEN,
 		strBcryptDll);
 
+	static CHAR strSecur32Dll[STRING_SECUR32_DLL_LEN + 1] = ""; // "Secur32.dll"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_SECUR32_DLL,
+		STRING_SECUR32_DLL_LEN,
+		strSecur32Dll);
+
 	// Get necessary strings for functions
 	static CHAR strMessageBoxA[STRING_MESSAGEBOX_A_LEN + 1] = ""; // "MessageBoxA"
 	DeobfuscateUtf8String(
@@ -371,12 +377,25 @@ WinApiCustom::WinApiCustom()
 		STRING_RESET_EVENT_LEN,
 		strCloseHandle);
 
+	static CHAR strGetUserNameExA[STRING_GET_USER_NAME_EX_A_LEN + 1] = ""; // "GetUserNameExA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_USER_NAME_EX_A,
+		STRING_GET_USER_NAME_EX_A_LEN,
+		strGetUserNameExA);
+
+	static CHAR strGetComputerNameExA[STRING_GET_COMPUTER_NAME_EX_A_LEN + 1] = ""; // "GetComputerNameExA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_COMPUTER_NAME_EX_A,
+		STRING_GET_COMPUTER_NAME_EX_A_LEN,
+		strGetComputerNameExA);
+
 	// Load necessary modules
 	loadedModules.hNtdll = LoadLibraryCustom(strNtdllDll);
 	loadedModules.hKernel32 = LoadLibraryCustom(strKernel32Dll);
 	loadedModules.hUser32 = LoadLibraryCustom(strUser32Dll);
 	loadedModules.hWininet = LoadLibraryCustom(strWininetDll);
 	loadedModules.hBcrypt = LoadLibraryCustom(strBcryptDll);
+	loadedModules.hSecur32 = LoadLibraryCustom(strSecur32Dll);
 
 	// Save necessary global module handles
 	hNtdll = loadedModules.hNtdll;
@@ -408,6 +427,8 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.CreateEventA = (HANDLE(*)(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName))GetProcAddressCustom(loadedModules.hKernel32, strCreateEventA);
 	loadedFunctions.SetEvent = (BOOL(*)(HANDLE hEvent))GetProcAddressCustom(loadedModules.hKernel32, strSetEvent);
 	loadedFunctions.ResetEvent = (BOOL(*)(HANDLE hEvent))GetProcAddressCustom(loadedModules.hKernel32, strResetEvent);
+	loadedFunctions.GetUserNameExA = (BOOLEAN(*)(IN EXTENDED_NAME_FORMAT NameFormat, OUT LPSTR lpNameBuffer, IN OUT PULONG nSize))GetProcAddressCustom(loadedModules.hSecur32, strGetUserNameExA);
+	loadedFunctions.GetComputerNameExA = (BOOL(*)(IN COMPUTER_NAME_FORMAT NameType, OUT LPSTR lpBuffer, IN OUT LPDWORD nSize))GetProcAddressCustom(loadedModules.hKernel32, strGetComputerNameExA);
 }
 
 /* Destructor for WinApiCustom */
@@ -464,4 +485,70 @@ HANDLE WinApiCustom::CreateThreadCustom(LPTHREAD_START_ROUTINE pThreadFunc, LPVO
 HANDLE WinApiCustom::CreateMutexCustom()
 {
 	return this->loadedFunctions.CreateMutexA(NULL, FALSE, NULL);
+}
+
+/*
+Get user name wrapper
+
+Returned pointer points to buffer that must be manually freed
+*/
+LPVOID WinApiCustom::GetUserNameCustom()
+{
+	ULONG size = 0;
+	this->loadedFunctions.GetUserNameExA(
+		EXTENDED_NAME_FORMAT::NameSamCompatible,
+		NULL,
+		&size);
+
+	if (size == 0)
+		return NULL;
+
+	size = size / sizeof(WCHAR);
+
+	LPVOID userNameBuf = this->HeapAllocCustom(size);
+	if (userNameBuf == NULL)
+		return NULL;
+
+	if (!this->loadedFunctions.GetUserNameExA(
+			EXTENDED_NAME_FORMAT::NameSamCompatible,
+			(LPSTR)userNameBuf,
+			&size))
+	{
+		this->HeapFreeCustom(userNameBuf);
+		return NULL;
+	}
+
+	return userNameBuf;
+}
+
+/*
+Get FQDN of computer
+
+Returned pointer points to buffer that must be manually freed
+*/
+LPVOID WinApiCustom::GetFQDNComputer()
+{
+	DWORD size = 0;
+	this->loadedFunctions.GetComputerNameExA(
+		COMPUTER_NAME_FORMAT::ComputerNameDnsFullyQualified,
+		NULL,
+		&size);
+
+	if (size == 0)
+		return NULL;
+
+	LPVOID computerNameBuf = this->HeapAllocCustom(size);
+	if (computerNameBuf == NULL)
+		return NULL;
+
+	if (!this->loadedFunctions.GetComputerNameExA(
+			COMPUTER_NAME_FORMAT::ComputerNameDnsFullyQualified,
+			(LPSTR)computerNameBuf,
+			&size))
+	{
+		this->HeapFreeCustom(computerNameBuf);
+		return NULL;
+	}
+
+	return computerNameBuf;
 }
