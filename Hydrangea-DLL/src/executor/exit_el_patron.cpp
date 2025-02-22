@@ -25,5 +25,5 @@ BOOL IsTaskForExit(LPVOID pTask)
         STRING_AGENT_CAP_EXIT_LEN,
         strAgentCapExit);
 
-    return CompareBuffer(pTask, strAgentCapExit, STRING_AGENT_CAP_MESSAGEBOX_LEN);
+    return CompareBuffer(pTask, strAgentCapExit, STRING_AGENT_CAP_EXIT_LEN);
 }

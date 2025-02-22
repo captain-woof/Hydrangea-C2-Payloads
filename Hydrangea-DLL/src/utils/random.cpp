@@ -59,6 +59,7 @@ BOOL RandomGenerator::GenerateRandomStr(IN DWORD numOfChars, OUT LPVOID pBuffer)
     {
         // Create heap to store random bytes
         LPVOID randomBytes = this->pWinApiCustom->HeapAllocCustom(numOfChars);
+        BOOL returnVal = FALSE;
 
         // Generate random bytes, and use it to fill-up random string buffer
         int index = 0;
@@ -71,7 +72,7 @@ BOOL RandomGenerator::GenerateRandomStr(IN DWORD numOfChars, OUT LPVOID pBuffer)
                 numOfChars,
                 NULL);
             if (status != 0)
-                return FALSE;
+                goto CLEANUP;
 
             /*
             For each random byte, try mapping to a character
@@ -95,10 +96,13 @@ BOOL RandomGenerator::GenerateRandomStr(IN DWORD numOfChars, OUT LPVOID pBuffer)
         // Add null termination byte
         ((PBYTE)pBuffer)[numOfChars] = 0;
 
-        // Cleanup heap
-        this->pWinApiCustom->HeapFreeCustom(randomBytes);
+        returnVal = TRUE;
 
-        return TRUE;
+    CLEANUP:
+        if (randomBytes != NULL)
+            this->pWinApiCustom->HeapFreeCustom(randomBytes);
+
+        return returnVal;
     }
     else
         return FALSE;

@@ -1,6 +1,8 @@
 #pragma once
 #include <windows.h>
 
+void ConcatBuffer(IN LPVOID pBufferDestination, IN DWORD bufferDestinationSize, IN LPVOID pBufferSource, IN DWORD bufferSourceSize);
+void ConcatString(IN PCHAR pStr1, IN PCHAR pStr2);
 BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD numOfBytesToCompare);
 DWORD StrLen(IN PCHAR strIn);
 void RtlZeroMemoryCustom(IN PBYTE pBuf, IN DWORD bufSize);

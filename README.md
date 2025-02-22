@@ -38,7 +38,7 @@ Subagent ("456DEF") was previously tasked with Task 13, and below shows it sendi
 ### 1. Agent registers itself on Listener with its ID
 
 ```
-AGENT_REGISTER-123ABC-HOSTNAME-USERNAME
+AGENT_REGISTER-123ABC-base64(HOSTNAME)-base64(USERNAME)
 ```
 
 ### 2. Listener responds
@@ -58,7 +58,7 @@ If there is something for output:
 ```
 TASK_OUTPUT-12-base64(output)
 TASK_OUTPUT-13-base64(output)
-SUBAGENT_REGISTER-456DEF-HOSTNAME-USERNAME
+AGENT_REGISTER-456DEF-HOSTNAME-USERNAME
 GET_TASKS-123ABC
 GET_TASKS-456DEF
 ```

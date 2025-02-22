@@ -14,8 +14,6 @@ private:
     Node *head;
     Node *tail;
     DWORD size;                  // Keep track of the queue's size for efficiency
-    Node *lastDataAccessed;      // Keep track of last accessed data for efficiency (carry-on from here next time)
-    DWORD lastDataAccessedIndex; // Keep track of last accessed data for efficiency (carry-on from here next time)
     WinApiCustom *pWinApiCustom;
     BOOL shareWithThreads;
     HANDLE hMutex; // For threads using this queue

