@@ -1,5 +1,5 @@
 import sys
-import random
+import re
 
 # Generated with keygen.py
 encKey = b"\x28\x4B\x1C\x70\xE6\xDE\x83\x09\x2C\x51\x22\xC5\x5A\xE4\x62\xC2\x4D\x6D\x81\x7E\x56\x8C\xE3\xF4\xAE\x70\xDD\x47\x6F\x0D\x5B\x21"
@@ -45,15 +45,25 @@ def printBytes(bytesToPrint: bytes):
     for b in bytesToPrint:
         print(f"\\x{b:02x}", end="")
 
+def pascalToSnakeCapitalised(strToConvert):
+    if not strToConvert:
+        return ""
+    snake_case = re.sub(r'([A-Z])', r'_\1', strToConvert)
+    # Remove leading underscore if the string started with uppercase (e.g., "IsATree" becomes "_Is_A_Tree", then "IS_A_TREE")
+    if snake_case.startswith('_'):
+        snake_case = snake_case[1:]
+    return snake_case.upper()
+
 def printObfuscatedStr(strToObfuscate: str):
     strObfuscated = obfuscateString(strToObfuscate)
+    strVariableName = pascalToSnakeCapitalised(strToObfuscate)
 
-    print(f"CHAR strObfuscated[] = \"", end="")
+    print(f"CHAR STRING_{strVariableName}[] = \"", end="")
     printBytes(strObfuscated)
-    print("\";")
+    print(f"\"; // \"{strToObfuscate}\"")
 
-    print(f"DWORD strLen = {len(strToObfuscate)};")
-    print(f"DWORD strObfuscatedLen = {len(strObfuscated)};")
+    print(f"DWORD STRING_{strVariableName}_LEN = {len(strToObfuscate)};")
+    print(f"DWORD STRING_{strVariableName}_OBFUSCATED_LEN = {len(strObfuscated)};")
 
 if __name__ == "__main__":
     # Print encryption key
@@ -76,4 +86,13 @@ if __name__ == "__main__":
     
     ## One-shot mode
     else:
+        # If it's a file, use it as input
+        try:
+            with open(sys.argv[1], "r") as fileInput:
+                for strToObfuscate in fileInput:
+                    printObfuscatedStr(strToObfuscate.rstrip("\n"))
+            exit(0)
+        except Exception:
+            pass
+
         printObfuscatedStr(sys.argv[1])
