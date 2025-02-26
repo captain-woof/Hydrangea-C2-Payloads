@@ -14,9 +14,11 @@ private:
     Node *head;
     Node *tail;
     DWORD size;                  // Keep track of the queue's size for efficiency
-    WinApiCustom *pWinApiCustom;
     BOOL shareWithThreads;
     HANDLE hMutex; // For threads using this queue
+
+protected:
+    WinApiCustom *pWinApiCustom;
 
 public:
     Queue();
@@ -24,7 +26,7 @@ public:
     ~Queue();
 
     // Queue Operations
-    BOOL Enqueue(LPVOID buffer);
+    BOOL Enqueue(LPVOID buffer, DWORD bufferSize);
     LPVOID Dequeue();
     LPVOID GetDataAtIndex(DWORD index, BOOL returnNode); // Function to get node at index
     LPVOID DequeueAt(DWORD index);

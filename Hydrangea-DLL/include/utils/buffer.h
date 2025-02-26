@@ -1,9 +1,13 @@
 #pragma once
 #include <windows.h>
 
+#define HIDWORD(dword64) ((DWORD)(((DWORD64)(dword64) >> 32) & 0xffffffff));
+#define LODWORD(dword64) ((DWORD)((dword64) & 0xffffffff));
+
 void ConcatBuffer(IN LPVOID pBufferDestination, IN DWORD bufferDestinationSize, IN LPVOID pBufferSource, IN DWORD bufferSourceSize);
 void ConcatString(IN PCHAR pStr1, IN PCHAR pStr2);
 BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD numOfBytesToCompare);
+BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD64 numOfBytesToCompare);
 DWORD StrLen(IN PCHAR strIn);
 void RtlZeroMemoryCustom(IN PBYTE pBuf, IN DWORD bufSize);
 void WideStringToLower(IN PWCHAR strIn, IN OUT PWCHAR strOut);
@@ -14,6 +18,7 @@ BOOL Base64Decode(IN PCHAR pBase64String, OUT PUCHAR pBufferDecoded, OUT PDWORD 
 DWORD NullSeparatedArrayNumOfStringElements(PCHAR pNullSeparatedArray);
 PCHAR NullSeparatedArrayStringAt(PCHAR pNullSeparatedArray, DWORD index);
 void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD numBytesToCopy);
+void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD64 numBytesToCopy);
 DWORD StringSearchSubstring(PCHAR substringToSearch, PCHAR stringToSearchIn);
 DWORD GenericSeparatedArrayNumOfStringElements(IN PCHAR pGenericSeparatedArray, IN PCHAR pSeparator);
 BOOL GenericSeparatedArrayStringAt(IN PCHAR pString, IN PCHAR pSeparator, IN DWORD index, OUT PCHAR pOutBuffer, OUT PDWORD pOutBufferSize);

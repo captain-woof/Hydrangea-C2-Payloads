@@ -68,9 +68,16 @@ BOOL Queue::ReleaseThreadMutex()
         return TRUE;
 }
 
-// Enqueue - Adds a buffer to the end of the queue
-BOOL Queue::Enqueue(LPVOID buffer)
+/*
+Enqueue - Adds a buffer to the end of the queue
+
+Input buffer is copied into a new internally maintained buffer. Input buffer thus needs to be manually freed.
+*/
+BOOL Queue::Enqueue(LPVOID pBufferInput, DWORD bufferSize)
 {
+    if (pBufferInput == NULL || bufferSize == 0)
+        return FALSE;
+
     // Allocate memory for the node
     Node *newNode = (Node *)this->pWinApiCustom->HeapAllocCustom(sizeof(Node));
     if (!newNode)
@@ -78,7 +85,16 @@ BOOL Queue::Enqueue(LPVOID buffer)
         return FALSE;
     }
 
-    newNode->data = buffer;
+    // Allocate memory for buffer, and copy input buffer into it
+    LPVOID bufferForNewElement = this->pWinApiCustom->HeapAllocCustom(bufferSize);
+    if (bufferForNewElement == NULL)
+    {
+        this->pWinApiCustom->HeapFreeCustom(newNode);
+        return FALSE;
+    }
+    CopyBuffer(bufferForNewElement, pBufferInput, bufferSize);
+
+    newNode->data = bufferForNewElement;
     newNode->next = NULL;
 
     if (this->IsEmpty())

@@ -22,12 +22,41 @@ BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD numOfBytesTo
     return TRUE;
 }
 
+/*
+Compares two buffers to check if they are equal
+
+Returns TRUE if buffers are equal
+*/
+BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD64 numOfBytesToCompare)
+{
+    for (DWORD64 i = 0; i < numOfBytesToCompare; i++)
+    {
+        if (((PBYTE)pBuffer1)[i] != ((PBYTE)pBuffer2)[i])
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 /* Copy contents of one buffer into another */
 void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD numBytesToCopy)
 {
     if (numBytesToCopy != 0)
     {
         for (int i = 0; i < numBytesToCopy; i++)
+        {
+            ((PBYTE)pDestinationBuf)[i] = ((PBYTE)pSourceBuf)[i];
+        }
+    }
+}
+
+/* Copy contents of one buffer into another */
+void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD64 numBytesToCopy)
+{
+    if (numBytesToCopy != 0)
+    {
+        for (DWORD64 i = 0; i < numBytesToCopy; i++)
         {
             ((PBYTE)pDestinationBuf)[i] = ((PBYTE)pSourceBuf)[i];
         }
