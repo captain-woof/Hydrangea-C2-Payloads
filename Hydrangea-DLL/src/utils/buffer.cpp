@@ -74,6 +74,21 @@ DWORD StrLen(IN PCHAR strIn)
     return len;
 }
 
+/* Find length of UTF-16LE string */
+DWORD StrLenW(IN PWCHAR strIn)
+{
+    DWORD len = 0;
+    DWORD i = 0;
+
+    while (strIn[i] != 0)
+    {
+        ++len;
+        i += sizeof(WCHAR);
+    }
+
+    return len;
+}
+
 /*
 Concats 2 buffers. Source buffer is concatenated to Destination buffer.
 
@@ -82,16 +97,17 @@ bufferDestinationSize: Size of destination buffer
 pBufferSource: Source buffer
 bufferSourceSize: Size of source buffer
 */
-void ConcatBuffer(IN LPVOID pBufferDestination, IN DWORD bufferDestinationSize, IN LPVOID pBufferSource, IN DWORD bufferSourceSize) {
+void ConcatBuffer(IN LPVOID pBufferDestination, IN DWORD bufferDestinationSize, IN LPVOID pBufferSource, IN DWORD bufferSourceSize)
+{
     CopyBuffer(
         (PBYTE)pBufferDestination + bufferDestinationSize,
         pBufferSource,
-        bufferSourceSize
-    );
+        bufferSourceSize);
 }
 
 /* Concat 2 UTF-8 strings */
-void ConcatString(IN PCHAR pStr1, IN PCHAR pStr2) {
+void ConcatString(IN PCHAR pStr1, IN PCHAR pStr2)
+{
     return ConcatBuffer(
         pStr1,
         StrLen(pStr1),
@@ -103,9 +119,15 @@ void ConcatString(IN PCHAR pStr1, IN PCHAR pStr2) {
 /* Zero-out a buffer */
 void RtlZeroMemoryCustom(IN PBYTE pBuf, IN DWORD bufSize)
 {
-    for (int i = 0; i < bufSize; i++)
+    MemsetCustom(pBuf, bufSize, 0);
+}
+
+/* Memset custom */
+void MemsetCustom(IN LPVOID pBuf, IN DWORD bufSize, IN BYTE fillByte)
+{
+    for (DWORD i = 0; i < bufSize; i++)
     {
-        pBuf[i] = 0;
+        ((PBYTE)pBuf)[i] = fillByte;
     }
 }
 
@@ -129,6 +151,23 @@ DWORD Utf8ToWideString(IN PCHAR strIn, OUT PWCHAR strOut)
         return numOfCharsWritten * sizeof(WCHAR);
     }
     return strOutBufReqdSize;
+}
+
+/* Convert UTF-16LE string to UTF-8 */
+DWORD WideStringToUtf8(IN PWCHAR strIn, OUT PCHAR strOut)
+{
+    if (strIn == NULL || strOut == NULL)
+        return 0;
+
+    return WideCharToMultiByte(
+        CP_UTF8,
+        WC_COMPOSITECHECK,
+        strIn,
+        -1,
+        strOut,
+        StrLenW(strIn) + 1,
+        NULL,
+        NULL);
 }
 
 /* Deobfuscates a string */
@@ -162,7 +201,7 @@ void DeobfuscateUtf8String(IN PCHAR strObfuscated, IN DWORD strDeobfuscatedLen, 
 }
 
 // Function to find the index of a character in the base64Chars array
-int StringSearchCharacter(CHAR charToSearch, PCHAR stringToSearchIn)
+DWORD StringSearchCharacter(CHAR charToSearch, PCHAR stringToSearchIn)
 {
     for (int i = 0; stringToSearchIn[i] != '\0'; ++i)
     {
@@ -197,6 +236,48 @@ DWORD StringSearchSubstring(PCHAR substringToSearch, PCHAR stringToSearchIn)
         {
             return i;
         }
+    }
+
+    return -1; // Not found
+}
+
+// Function to find the index of a character in the base64Chars array
+DWORD StringSearchCharacterFromLast(CHAR charToSearch, PCHAR stringToSearchIn)
+{
+    if (stringToSearchIn == NULL)
+        return -1;
+
+    DWORD strToSearchInLen = StrLen(stringToSearchIn);
+    if (strToSearchInLen == 0)
+        return -1;
+
+    for (int i = strToSearchInLen - 1; i >= 0; --i)
+    {
+        if (stringToSearchIn[i] == charToSearch)
+            return i;
+    }
+    return -1; // Not found
+}
+
+// Function to find the index of a character in the base64Chars array
+DWORD StringSearchSubstringFromLast(PCHAR substringToSearch, PCHAR stringToSearchIn)
+{
+    const DWORD substringToSearchLen = StrLen(substringToSearch);
+    const DWORD stringToSearchInLen = StrLen(stringToSearchIn);
+    DWORD j = 0;
+
+    for (int i = stringToSearchInLen - substringToSearchLen; i >= 0; --i)
+    {
+        // Validate match sequentially for all characters in substring
+        for (j = 0; j < substringToSearchLen; ++j)
+        {
+            if (substringToSearch[j] != stringToSearchIn[i + j])
+                break;
+        }
+
+        // If a match is found
+        if (j == substringToSearchLen)
+            return i;
     }
 
     return -1; // Not found
@@ -498,4 +579,116 @@ BOOL GenericSeparatedArrayStringAt(IN PCHAR pString, IN PCHAR pSeparator, IN DWO
     }
 
     return TRUE;
+}
+
+/*
+Function to convert integer to string
+
+number: Number to convert
+pOutput: 12 bytes buffer that receives output; must be manually pre-allocated and freed
+*/
+void Integer32ToString(IN DWORD number, OUT PCHAR pOutput)
+{
+    if (pOutput == NULL)
+    {
+        return;
+    }
+
+    if (number == 0)
+    {
+        pOutput[0] = '0';
+        pOutput[1] = '\0';
+        return;
+    }
+
+    int digitCount = 0;
+    DWORD tempNumber = number;
+    while (tempNumber > 0)
+    {
+        tempNumber /= 10;
+        digitCount++;
+    }
+
+    int index = 0;
+    tempNumber = number;
+    while (tempNumber > 0)
+    {
+        pOutput[digitCount - 1 - index] = (tempNumber % 10) + '0'; // Convert digit to char
+        tempNumber /= 10;
+        index++;
+    }
+    pOutput[digitCount] = '\0'; // Null-terminate the string
+}
+
+/*
+Function to convert integer to string
+
+number: Number to convert
+pOutput: 22 bytes buffer that receives output; must be manually pre-allocated and freed
+*/
+void Integer64ToString(IN DWORD64 number, OUT PCHAR pOutput)
+{
+    if (pOutput == NULL)
+    {
+        return;
+    }
+
+    if (number == 0)
+    {
+        pOutput[0] = '0';
+        pOutput[1] = '\0';
+        return;
+    }
+
+    int digitCount = 0;
+    DWORD tempNumber = number;
+    while (tempNumber > 0)
+    {
+        tempNumber /= 10;
+        digitCount++;
+    }
+
+    int index = 0;
+    tempNumber = number;
+    while (tempNumber > 0)
+    {
+        pOutput[digitCount - 1 - index] = (tempNumber % 10) + '0'; // Convert digit to char
+        tempNumber /= 10;
+        index++;
+    }
+    pOutput[digitCount] = '\0'; // Null-terminate the string
+}
+
+/*
+Get file/directory name from full-path
+
+fullPath: Pointer to full-path string
+
+Returned pointer points to filename beginning in fullPath string
+*/
+PCHAR GetFileNameFromFullPathCustom(IN PCHAR fullPath)
+{
+    if (fullPath == NULL)
+        return NULL;
+    DWORD fullPathLen = StrLen(fullPath);
+    if (fullPathLen == 0)
+        return NULL;
+
+    // If there is a last backslash, treat everything after it as filename
+    DWORD lastBackSlashIndex = StringSearchCharacterFromLast('\\', fullPath);
+    if (lastBackSlashIndex != -1)
+        return &(fullPath[lastBackSlashIndex + 1]);
+
+    // If there is no backslash
+    else
+    {
+        // If there is a last frontslash, treat everything after it as a filename
+        DWORD lastFrontSlashIndex = StringSearchCharacterFromLast('/', fullPath);
+        if (lastFrontSlashIndex != -1)
+            return &(fullPath[lastFrontSlashIndex + 1]);
+
+        // Else, treat entire full-path as filename
+        else
+            return fullPath;
+    }
 }

@@ -32,6 +32,7 @@ private:
     DWORD taskAgentSpecSize;
 
     void SetOutputInOutputQueue(IN PCHAR taskId, IN PCHAR taskOutput, BOOL shouldFreeTaskOutputBuffer);
+    void SetRawOutputInOutputQueue(IN PCHAR taskId, IN LPVOID taskOutput, IN DWORD taskOutputLen, BOOL shouldFreeTaskOutputBuffer);
     void GetTasksForSelf();
 
 public:

