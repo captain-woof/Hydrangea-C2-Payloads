@@ -24,7 +24,7 @@ Executor::Executor(WinApiCustom *pWinApiCustom, Queue *pTaskInputQueue, Queue *p
         strTask);
 
     this->taskAgentSpecSize = STRING_TASK_LEN + 1 + 6; // "TASK" + "-" + "6 char agent id"
-    this->pTaskAgentSpec = this->pWinApiCustom->HeapAllocCustom(this->taskAgentSpecSize);
+    this->pTaskAgentSpec = this->pWinApiCustom->HeapAllocCustom(this->taskAgentSpecSize + 1);
     if (pTaskAgentSpec == NULL)
     {
         this->pEventAgentShouldStop->Set();
