@@ -57,9 +57,13 @@ BOOL RandomGenerator::GenerateRandomStr(IN DWORD numOfChars, OUT LPVOID pBuffer)
 {
     if (this->hBcryptAlgorithmProvider != NULL)
     {
-        // Create heap to store random bytes
-        LPVOID randomBytes = this->pWinApiCustom->HeapAllocCustom(numOfChars);
+        LPVOID randomBytes = NULL;
         BOOL returnVal = FALSE;
+
+        // Create heap to store random bytes
+        randomBytes = this->pWinApiCustom->HeapAllocCustom(numOfChars);
+        if (randomBytes == NULL)
+            goto CLEANUP;
 
         // Generate random bytes, and use it to fill-up random string buffer
         int index = 0;
@@ -81,7 +85,7 @@ BOOL RandomGenerator::GenerateRandomStr(IN DWORD numOfChars, OUT LPVOID pBuffer)
             a-z = 0x61 - 0x7A
             */
             BYTE randomByte = 0;
-            for (int i = 0; i < numOfChars, index < numOfChars; ++i)
+            for (int i = 0; (i < numOfChars && index < numOfChars); ++i)
             {
                 randomByte = ((PBYTE)randomBytes)[i];
 

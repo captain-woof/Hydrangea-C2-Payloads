@@ -243,6 +243,7 @@ struct LoadedFunctions
     BOOL (*WriteFile)(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
     BOOL (*DeleteFileA)(LPCSTR lpFileName);
     BOOL (*RemoveDirectoryA)(LPCSTR lpPathName);
+    BOOL (*HeapValidate)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
 };
 
 /* Class for WinAPI functions */

@@ -115,7 +115,7 @@ void Executor::StartExecutor()
             if (!GenericSeparatedArrayStringAt(taskData, "-", 3, (PCHAR)taskB64, &taskB64Size))
                 goto CLEANUP_TASK;
 
-            task = this->pWinApiCustom->HeapAllocCustom(((StrLen((PCHAR)taskB64) / 4) * 3) + 1);
+            task = this->pWinApiCustom->HeapAllocCustom(((StrLen((PCHAR)taskB64) / 4) * 3) + 2); // End with 2 null-bytes for null-separated array
             if (task == NULL)
                 goto CLEANUP_TASK;
 
@@ -245,11 +245,15 @@ Enqueues Task output (raw) in global Task output queue
 */
 void Executor::SetRawOutputInOutputQueue(IN PCHAR taskId, IN LPVOID taskOutput, IN DWORD taskOutputLen, BOOL shouldFreeTaskOutputBuffer)
 {
+    // Heaps
+    LPVOID taskOutputStatement = NULL;
+    PVOID taskOutputB64 = NULL;
+    
     // Get Task ID length
     DWORD taskIdLen = StrLen(taskId);
 
     // Convert Task output to base64
-    LPVOID taskOutputB64 = this->pWinApiCustom->HeapAllocCustom((((taskOutputLen + 2) / 3) * 4));
+    taskOutputB64 = this->pWinApiCustom->HeapAllocCustom((((taskOutputLen + 2) / 3) * 4) + 1);
     if (taskOutputB64 == NULL)
         goto CLEANUP;
 
@@ -265,7 +269,7 @@ void Executor::SetRawOutputInOutputQueue(IN PCHAR taskId, IN LPVOID taskOutput, 
         strTaskOutput);
 
     DWORD taskOutputStatementLen = STRING_TASK_OUTPUT_LEN + 1 + taskIdLen + 1 + taskOutputB64Len + 1; // "TASK_OUTPUT" + "-" + "Task ID" + "-" + "Task output base64" + null-byte
-    LPVOID taskOutputStatement = this->pWinApiCustom->HeapAllocCustom(taskOutputStatementLen);
+    taskOutputStatement = this->pWinApiCustom->HeapAllocCustom(taskOutputStatementLen);
     if (taskOutputStatement == NULL)
         goto CLEANUP;
 

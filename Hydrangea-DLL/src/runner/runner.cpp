@@ -38,7 +38,8 @@ void Runner::Run()
         PCHAR pAgentId = (PCHAR)winApiCustom.HeapAllocCustom(7); // 6 characters + 1 null-byte
         if (pAgentId == NULL)
             goto CLEANUP;
-        randomGenerator.GenerateRandomStr(6, pAgentId);
+        if (!randomGenerator.GenerateRandomStr(6, pAgentId))
+            goto CLEANUP;
 
         // Start Communicator thread
         HttpCommunicatorThreadArgs httpCommunicatorThreadArgs;

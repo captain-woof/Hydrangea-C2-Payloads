@@ -12,6 +12,9 @@ Returns TRUE if buffers are equal
 */
 BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD numOfBytesToCompare)
 {
+    if (pBuffer1 == NULL || pBuffer2 == NULL)
+        return FALSE;
+
     for (int i = 0; i < numOfBytesToCompare; i++)
     {
         if (((PBYTE)pBuffer1)[i] != ((PBYTE)pBuffer2)[i])
@@ -29,12 +32,13 @@ Returns TRUE if buffers are equal
 */
 BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD64 numOfBytesToCompare)
 {
+    if (pBuffer1 == NULL || pBuffer2 == NULL)
+        return FALSE;
+
     for (DWORD64 i = 0; i < numOfBytesToCompare; i++)
     {
         if (((PBYTE)pBuffer1)[i] != ((PBYTE)pBuffer2)[i])
-        {
             return FALSE;
-        }
     }
     return TRUE;
 }
@@ -42,7 +46,7 @@ BOOL CompareBuffer(IN LPVOID pBuffer1, IN LPVOID pBuffer2, IN DWORD64 numOfBytes
 /* Copy contents of one buffer into another */
 void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD numBytesToCopy)
 {
-    if (numBytesToCopy != 0)
+    if (pDestinationBuf != NULL && pSourceBuf != NULL & numBytesToCopy != 0)
     {
         for (int i = 0; i < numBytesToCopy; i++)
         {
@@ -54,7 +58,7 @@ void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD numBytesT
 /* Copy contents of one buffer into another */
 void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD64 numBytesToCopy)
 {
-    if (numBytesToCopy != 0)
+    if (pDestinationBuf != NULL && pSourceBuf != NULL & numBytesToCopy != 0)
     {
         for (DWORD64 i = 0; i < numBytesToCopy; i++)
         {
@@ -66,6 +70,9 @@ void CopyBuffer(IN LPVOID pDestinationBuf, IN LPVOID pSourceBuf, DWORD64 numByte
 /* Find length of UTF-8 string */
 DWORD StrLen(IN PCHAR strIn)
 {
+    if (strIn == NULL)
+        return 0;
+
     DWORD len = 0;
     while (strIn[len] != 0)
     {
@@ -77,14 +84,13 @@ DWORD StrLen(IN PCHAR strIn)
 /* Find length of UTF-16LE string */
 DWORD StrLenW(IN PWCHAR strIn)
 {
-    DWORD len = 0;
-    DWORD i = 0;
+    if (strIn == NULL)
+        return 0;
 
-    while (strIn[i] != 0)
-    {
+    DWORD len = 0;
+
+    while (strIn[len] != 0)
         ++len;
-        i += sizeof(WCHAR);
-    }
 
     return len;
 }
@@ -134,8 +140,8 @@ void MemsetCustom(IN LPVOID pBuf, IN DWORD bufSize, IN BYTE fillByte)
 /* Convert a UTF-16LE string to all lowercase */
 void WideStringToLower(IN PWCHAR strIn, IN OUT PWCHAR strOut)
 {
-    int stringLenBytes = lstrlenW(strIn) * sizeof(WCHAR);
-    for (int i = 0; i < stringLenBytes; i++)
+    int stringLen = StrLenW(strIn);
+    for (int i = 0; i < stringLen; i++)
     {
         strOut[i] = towlower(strIn[i]);
     }

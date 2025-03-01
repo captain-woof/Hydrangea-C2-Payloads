@@ -116,7 +116,7 @@ DWORD SendWebRequest(WinApiCustom *pWinApiCustom, IN BOOL isHttps, IN PCHAR verb
                 if (*pResponseBuffer == NULL)
                 {
                     // Allocate memory from heap
-                    *pResponseBuffer = pWinApiCustom->HeapAllocCustom(numberOfBytesReadChunk);
+                    *pResponseBuffer = pWinApiCustom->HeapAllocCustom(numberOfBytesReadChunk + 1);
                     if (*pResponseBuffer == NULL)
                     {
                         LastError = pWinApiCustom->loadedFunctions.GetLastError();
@@ -134,7 +134,7 @@ DWORD SendWebRequest(WinApiCustom *pWinApiCustom, IN BOOL isHttps, IN PCHAR verb
                 else
                 {
                     // Reallocate additional memory
-                    *pResponseBuffer = pWinApiCustom->HeapReAllocCustom(*pResponseBuffer, *pResponseSize + numberOfBytesReadChunk);
+                    *pResponseBuffer = pWinApiCustom->HeapReAllocCustom(*pResponseBuffer, *pResponseSize + numberOfBytesReadChunk + 1);
                     if (*pResponseBuffer == NULL)
                     {
                         LastError = pWinApiCustom->loadedFunctions.GetLastError();

