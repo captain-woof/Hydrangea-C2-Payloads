@@ -1,5 +1,7 @@
 # Hydrangea
 
+![hydrangea](https://github.com/user-attachments/assets/8bdca96f-cb1a-4338-bfdd-d6a1c6abe0b8)
+
 ## Building
 
 ### On Windows
