@@ -17,11 +17,35 @@ include_directories(include)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 # Optional features to include
+
+## Communicator type
 set(COMMUNICATOR_TYPE "http" CACHE STRING "Specifies how the agent should communicate to listener")
-target_compile_definitions(${PROJECT_NAME}
-    PRIVATE
-        "COMMUNICATOR_TYPE=\"${COMMUNICATOR_TYPE}\"" # Define MY_FEATURE_MACRO with the value
-)
+
+if(COMMUNICATOR_TYPE STREQUAL "http")
+    target_compile_definitions(${PROJECT_NAME}
+        PRIVATE
+            COMMUNICATOR_TYPE_HTTP # Define COMMUNICATOR_TYPE_HTTP
+    )
+    message("Communicator: HTTP")
+endif()
+
+# Set Debug/Release information
+
+## Debug configuration
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(${PROJECT_NAME}
+        PRIVATE
+            BUILD_DEBUG # Define macro BUILD_DEBUG for Debug builds
+    )
+    message("Configuration: DEBUG")
+## Release configuration
+else(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_definitions(${PROJECT_NAME}
+        PRIVATE
+            BUILD_RELEASE # Define macro BUILD_RELEASE for Release builds
+    )
+    message("Configuration: RELEASE")
+endif()
 
 # Target properties for Windows DLL
 set_target_properties(${PROJECT_NAME} PROPERTIES

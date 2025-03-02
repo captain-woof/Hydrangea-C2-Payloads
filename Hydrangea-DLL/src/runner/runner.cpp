@@ -18,9 +18,16 @@ void Runner::Run()
         const CHAR host[] = "kali";
         const DWORD port = 8080;
         const CHAR urlPathChoices[] = "/politics/congress-investigates-allegations-of-foreign-interference\x00/politics/new-study-reveals-stark-disparities-in-healthcare-access\x00";
-        const DWORD communicationIntervalSecs = 10;
+
+#ifdef BUILD_DEBUG
+        const DWORD communicationIntervalSecs = 2;
+        const DWORD executorIntervalSecs = 1;
         const DWORD registrationWaitSecs = 3000;
+#else
+        const DWORD communicationIntervalSecs = 10;
         const DWORD executorIntervalSecs = 5;
+        const DWORD registrationWaitSecs = 60;
+#endif
 
         // For WinAPI stuff
         WinApiCustom winApiCustom = WinApiCustom();
