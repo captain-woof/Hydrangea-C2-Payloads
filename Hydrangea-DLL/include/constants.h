@@ -496,3 +496,7 @@ constexpr CHAR STRING_AGENT_CAP_UPLOAD[] = "\x7d\x0f\x4c\x31\xaa\x91\x61\x61\x61
 constexpr DWORD STRING_AGENT_CAP_UPLOAD_LEN = 6;
 constexpr CHAR STRING_AGENT_CAP_ICACLS_FILE[] = "\x61\x0e\x5f\x3c\xa7\x97\xc0\x4f\x60\x0e\x71\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61\x61"; // "ICACLS_FILE"
 constexpr DWORD STRING_AGENT_CAP_ICACLS_FILE_LEN = 11;
+constexpr CHAR STRING_AGENT_CAP_MKDIR[] = "\x65\x19\x57\x39\xa2\x61\x61\x61\x61\x61"; // "MKDIR"
+constexpr DWORD STRING_AGENT_CAP_MKDIR_LEN = 5;
+constexpr CHAR STRING_AGENT_CAP_CAT[] = "\x6b\x1f\x5d\x61\x61\x61"; // "CAT"
+constexpr DWORD STRING_AGENT_CAP_CAT_LEN = 3;
