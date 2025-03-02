@@ -552,7 +552,7 @@ BOOL WinApiCustom::CopyFileCustom(PCHAR sourcePath, PCHAR destPath)
         CHAR subDestPath[MAX_PATH] = "";
         do
         {
-            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) ".", (DWORD)1) && CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) "..", (DWORD)2))
+            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID)".", (DWORD)1) && !CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID)"..", (DWORD)2))
             {
                 RtlZeroMemoryCustom((PBYTE)subSourcePath, MAX_PATH);
                 RtlZeroMemoryCustom((PBYTE)subDestPath, MAX_PATH);
@@ -593,95 +593,8 @@ BOOL WinApiCustom::MoveFileCustom(PCHAR sourcePath, PCHAR destPath)
     if (sourcePath == NULL || destPath == NULL)
         return FALSE;
 
-    DWORD sourcePathLen = StrLen(sourcePath);
-    DWORD destPathLen = StrLen(destPath);
-
-    DWORD fileAttributesSource = this->loadedFunctions.GetFileAttributesA(sourcePath);
-    if (fileAttributesSource == INVALID_FILE_ATTRIBUTES)
-        return FALSE;
-
-    // If Source is a file
-    if (!(fileAttributesSource & FILE_ATTRIBUTE_DIRECTORY))
-    {
-        DWORD fileAttributesDest = this->loadedFunctions.GetFileAttributesA(destPath);
-        CHAR finalDestFilePath[MAX_PATH] = "";
-
-        // Construct full destination directory path
-        ConcatString(finalDestFilePath, destPath);
-
-        //// If Destination is a directory, append source file name to it to get final destination full-path
-        if (fileAttributesDest != INVALID_FILE_ATTRIBUTES && (fileAttributesDest & FILE_ATTRIBUTE_DIRECTORY))
-        {
-            //// If last character is not a backslash, append it
-            if (destPath[destPathLen - 1] == '\\')
-                ConcatString(finalDestFilePath, "\\");
-
-            ConcatString(finalDestFilePath, GetFileNameFromFullPathCustom(sourcePath));
-        }
-
-        // Perform move
-        if (!this->loadedFunctions.MoveFileExA(sourcePath, finalDestFilePath, MOVEFILE_REPLACE_EXISTING))
-            return FALSE;
-    }
-
-    // Else if source is a directory
-    else
-    {
-        WIN32_FIND_DATAA findFileData;
-        HANDLE hFind = INVALID_HANDLE_VALUE;
-        CHAR searchPath[MAX_PATH] = "";
-        
-        // Construct search path
-        ConcatString(searchPath, sourcePath);
-
-        //// If ending source character is a slash, only add a wildcard *
-        if (sourcePath[sourcePathLen - 1] == '\\')
-            ConcatString(searchPath, "*");
-
-        //// If ending character is not even a slash
-        else if (!(sourcePath[sourcePathLen - 2] == '\\' && sourcePath[sourcePathLen - 1] == '*'))
-            ConcatString(searchPath, "\\*");
-
-        // Start finding children in search path
-        hFind = this->loadedFunctions.FindFirstFileA(searchPath, &findFileData);
-        if (hFind == INVALID_HANDLE_VALUE)
-            return FALSE;
-
-        CHAR subSourcePath[MAX_PATH] = "";
-        CHAR subDestPath[MAX_PATH] = "";
-        do
-        {
-            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) ".", (DWORD)1) && CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) "..", (DWORD)2))
-            {
-                RtlZeroMemoryCustom((PBYTE)subSourcePath, MAX_PATH);
-                RtlZeroMemoryCustom((PBYTE)subDestPath, MAX_PATH);
-
-                ConcatString(subSourcePath, sourcePath);
-                if (sourcePath[sourcePathLen - 1] != '\\')
-                    ConcatString(subSourcePath, "\\");
-                ConcatString(subSourcePath, findFileData.cFileName);
-
-                ConcatString(subDestPath, destPath);
-                if (destPath[destPathLen - 1] != '\\')
-                    ConcatString(subDestPath, "\\");
-                ConcatString(subDestPath, findFileData.cFileName);
-
-                // Perform recursive move
-                if (!MoveFileCustom(subSourcePath, subDestPath))
-                {
-                    this->loadedFunctions.FindClose(hFind);
-                    return FALSE; // Propagate failure up
-                }
-            }
-        } while (this->loadedFunctions.FindNextFileA(hFind, &findFileData) != 0);
-
-        this->loadedFunctions.FindClose(hFind); // Close find handle AFTER processing all children
-
-        // Move the directory itself AFTER processing all contents and closing FindHandle
-        return this->loadedFunctions.MoveFileExA(sourcePath, destPath, MOVEFILE_REPLACE_EXISTING);
-    }
-
-    return TRUE;
+    // Perform move
+    return this->loadedFunctions.MoveFileExA(sourcePath, destPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 }
 
 /*
@@ -806,7 +719,7 @@ BOOL WinApiCustom::DeleteFileOrDirCustom(PCHAR filePath)
         CHAR subFilePath[MAX_PATH] = "";
         do
         {
-            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) ".", (DWORD)1) && CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) "..", (DWORD)2))
+            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID)".", (DWORD)1) && !CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID)"..", (DWORD)2))
             {
                 RtlZeroMemoryCustom((PBYTE)subFilePath, MAX_PATH);
 
