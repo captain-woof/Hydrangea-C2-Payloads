@@ -340,7 +340,7 @@ void WinApiCustom::FileTimeToHumanFormat(IN PFILETIME pFileTime, OUT PCHAR pHuma
 Describes a directory listing
 
 pDirListing: Pointer to an array of WIN32_FIND_DATAA
-dirListingSize: Number of elements in above array
+dirListingSize: Size of above array (NOT number of elements)
 ppOutput: Double-pointer to an output PCHAR; must be manually freed
 */
 void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListing, IN DWORD dirListingSize, OUT CHAR **ppOutput)
@@ -358,8 +358,9 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
     CHAR datetimeAccess[25] = "";
     CHAR datetimeCreation[25] = "";
     CHAR attribute[45] = "";
+    DWORD numOfDirListing = dirListingSize / sizeof(WIN32_FIND_DATAA);
 
-    for (DWORD i = 0; i < dirListingSize; i++)
+    for (DWORD i = 0; i < numOfDirListing; i++)
     {
         pWin32FindData = &(pDirListing[i]);
 

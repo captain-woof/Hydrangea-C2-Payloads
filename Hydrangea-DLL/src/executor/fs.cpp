@@ -217,7 +217,7 @@ void HandleTaskFilesystem(IN WinApiCustom *pWinApiCustom, IN LPVOID pTask, OUT P
         if (NullSeparatedArrayNumOfStringElements((PCHAR)pTask) == 1 || NullSeparatedArrayNumOfStringElements((PCHAR)pTask) == 2)
         {
             PWIN32_FIND_DATAA pWin32FindDataArray = NULL;
-            DWORD listingElementsFound = 0;
+            DWORD win32FindArraySize = 0;
             PCHAR pListingDescribed = NULL;
             PCHAR dirPath = NULL;
 
@@ -239,12 +239,12 @@ void HandleTaskFilesystem(IN WinApiCustom *pWinApiCustom, IN LPVOID pTask, OUT P
                 pWinApiCustom->ListDirectoryCustom(
                     dirPath,
                     &pWin32FindDataArray,
-                    &listingElementsFound);
-                if (listingElementsFound != 0 && pWin32FindDataArray != NULL)
+                    &win32FindArraySize);
+                if (win32FindArraySize != 0 && pWin32FindDataArray != NULL)
                 {
                     pWinApiCustom->DescribeDirectoryListingCustom(
                         pWin32FindDataArray,
-                        listingElementsFound,
+                        win32FindArraySize,
                         (CHAR **)pResult);
 
                     if (*pResult != NULL)
