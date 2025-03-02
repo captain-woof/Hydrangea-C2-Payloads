@@ -349,12 +349,12 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
         return;
 
     /*
-    DT(m),DT(a),DT(c) <ATTR> SIZE NAME
+    DT(a),DT(c) <ATTR> NAME (SIZE bytes)
     */
 
     StringAggregator stringAggregator = StringAggregator(this, FALSE);
     PWIN32_FIND_DATAA pWin32FindData = NULL;
-    CHAR datetimeModification[25] = "";
+    //CHAR datetimeModification[25] = "";
     CHAR datetimeAccess[25] = "";
     CHAR datetimeCreation[25] = "";
     CHAR attribute[45] = "";
@@ -365,11 +365,11 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
         pWin32FindData = &(pDirListing[i]);
 
         // Datetime
-        RtlZeroMemoryCustom((PBYTE)datetimeModification, 25);
+        //RtlZeroMemoryCustom((PBYTE)datetimeModification, 25);
         RtlZeroMemoryCustom((PBYTE)datetimeAccess, 25);
         RtlZeroMemoryCustom((PBYTE)datetimeCreation, 25);
 
-        this->FileTimeToHumanFormat(&(pWin32FindData->ftLastWriteTime), datetimeModification);
+        //this->FileTimeToHumanFormat(&(pWin32FindData->ftLastWriteTime), datetimeModification);
         this->FileTimeToHumanFormat(&(pWin32FindData->ftLastAccessTime), datetimeAccess);
         this->FileTimeToHumanFormat(&(pWin32FindData->ftCreationTime), datetimeCreation);
 
@@ -455,18 +455,18 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
         Integer64ToString(fileSize.QuadPart, size);
 
         // Combine all pieces of data for current listing
-        stringAggregator.AddString(datetimeModification);
-        stringAggregator.AddString(",");
+        //stringAggregator.AddString(datetimeModification);
+        //stringAggregator.AddString(",");
         stringAggregator.AddString(datetimeAccess);
-        stringAggregator.AddString(",");
+        stringAggregator.AddString("(a),");
         stringAggregator.AddString(datetimeCreation);
-        stringAggregator.AddString(" <");
+        stringAggregator.AddString("(c) <");
         stringAggregator.AddString(attribute);
         stringAggregator.AddString("> ");
-        stringAggregator.AddString(size);
-        stringAggregator.AddString(" ");
         stringAggregator.AddString(pWin32FindData->cFileName);
-        stringAggregator.AddString("\n");
+        stringAggregator.AddString(" (");
+        stringAggregator.AddString(size);
+        stringAggregator.AddString(" bytes)\n");
     }
 
     // Create a single string buffer to combine everything
