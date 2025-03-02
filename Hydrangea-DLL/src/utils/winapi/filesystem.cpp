@@ -349,7 +349,7 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
         return;
 
     /*
-    DT(a),DT(c) <ATTR> NAME (SIZE bytes)
+    DT(a),DT(c) NAME <ATTR> (SIZE bytes)
     */
 
     StringAggregator stringAggregator = StringAggregator(this, FALSE);
@@ -456,15 +456,15 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
 
         // Combine all pieces of data for current listing
         //stringAggregator.AddString(datetimeModification);
-        //stringAggregator.AddString(",");
+        //stringAggregator.AddString("(m),");
         stringAggregator.AddString(datetimeAccess);
         stringAggregator.AddString("(a),");
         stringAggregator.AddString(datetimeCreation);
-        stringAggregator.AddString("(c) <");
-        stringAggregator.AddString(attribute);
-        stringAggregator.AddString("> ");
+        stringAggregator.AddString("(c) ");
         stringAggregator.AddString(pWin32FindData->cFileName);
-        stringAggregator.AddString(" (");
+        stringAggregator.AddString(" <");
+        stringAggregator.AddString(attribute);
+        stringAggregator.AddString("> (");
         stringAggregator.AddString(size);
         stringAggregator.AddString(" bytes)\n");
     }
