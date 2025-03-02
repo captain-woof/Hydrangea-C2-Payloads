@@ -564,6 +564,12 @@ WinApiCustom::WinApiCustom()
 		STRING_HEAP_VALIDATE_LEN,
 		strHeapValidate);
 
+	static CHAR strConvertSidToStringSidA[STRING_CONVERT_SID_TO_STRING_SID_A_LEN + 1] = ""; // "ConvertSidToStringSidA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_CONVERT_SID_TO_STRING_SID_A,
+		STRING_CONVERT_SID_TO_STRING_SID_A_LEN,
+		strConvertSidToStringSidA);
+
 	// Load necessary modules
 	loadedModules.hNtdll = LoadLibraryCustom(strNtdllDll);
 	loadedModules.hKernelbase = LoadLibraryCustom(strKernelbaseDll);
@@ -633,6 +639,7 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.DeleteFileA = (BOOL(*)(LPCSTR lpFileName))GetProcAddressCustom(loadedModules.hKernel32, strDeleteFileA);
 	loadedFunctions.RemoveDirectoryA = (BOOL(*)(LPCSTR lpPathName))GetProcAddressCustom(loadedModules.hKernel32, strRemoveDirectoryA);
 	loadedFunctions.HeapValidate = (BOOL(*)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem))GetProcAddressCustom(loadedModules.hKernel32, strHeapValidate);
+	loadedFunctions.ConvertSidToStringSidA = (BOOL(*)(PSID Sid, LPSTR * StringSid)) GetProcAddressCustom(loadedModules.hAdvapi32, strConvertSidToStringSidA);
 }
 
 /* Destructor for WinApiCustom */
@@ -698,11 +705,11 @@ HANDLE WinApiCustom::GetCurrentProcessHandle()
 }
 
 /*
-Get user name wrapper
+Get current user name wrapper
 
 Returned double-pointers point to buffers that must be manually freed
 */
-void WinApiCustom::GetUserNameCustom(OUT LPVOID *ppUserName, OUT LPVOID *ppDomainName)
+void WinApiCustom::GetCurrentUserCustom(OUT CHAR** ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName)
 {
 	// Initialise data
 	HANDLE hCurrentProcessToken = NULL;
@@ -742,8 +749,9 @@ void WinApiCustom::GetUserNameCustom(OUT LPVOID *ppUserName, OUT LPVOID *ppDomai
 		goto CLEANUP;
 
 	// Lookup user with above found SID
-	this->SidToUsernameCustom(
+	this->DescribeSid(
 		pTokenUserSid,
+		ppSidString,
 		ppUserName,
 		ppDomainName);
 
