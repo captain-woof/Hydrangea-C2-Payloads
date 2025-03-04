@@ -28,8 +28,8 @@ HMODULE GetModuleHandleCustom(PCHAR moduleName)
 	LIST_ENTRY listEntry = pPeb->Ldr->InMemoryOrderModuleList;
 	PLDR_DATA_TABLE_ENTRY pDataTableEntry = (PLDR_DATA_TABLE_ENTRY)listEntry.Flink;
 	PLDR_DATA_TABLE_ENTRY pDataTableEntryFirst = (PLDR_DATA_TABLE_ENTRY)listEntry.Flink;
-	WCHAR dllNameCurrLower[MAX_PATH];
-	WCHAR moduleNameWLower[MAX_PATH];
+	WCHAR dllNameCurrLower[MAX_PATH] = L"";
+	WCHAR moduleNameWLower[MAX_PATH] = L"";
 
 	RtlZeroMemoryCustom((PBYTE)moduleNameWLower, MAX_PATH);
 	WideStringToLower(moduleNameW, moduleNameWLower);
@@ -39,7 +39,8 @@ HMODULE GetModuleHandleCustom(PCHAR moduleName)
 		// If current module's name matches, return address to it
 		RtlZeroMemoryCustom((PBYTE)dllNameCurrLower, MAX_PATH);
 		WideStringToLower(pDataTableEntry->FullDllName.Buffer, dllNameCurrLower);
-		if (lstrcmpW(dllNameCurrLower, moduleNameWLower) == 0)
+
+		if (CompareBuffer(dllNameCurrLower, moduleNameWLower, StrLenW(moduleNameWLower)))
 		{
 			return (HMODULE)pDataTableEntry->Reserved2[0];
 		}
@@ -570,6 +571,150 @@ WinApiCustom::WinApiCustom()
 		STRING_CONVERT_SID_TO_STRING_SID_A_LEN,
 		strConvertSidToStringSidA);
 
+	static CHAR strNtQuerySystemInformation[STRING_NT_QUERY_SYSTEM_INFORMATION_LEN + 1] = ""; // "NtQuerySystemInformation"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_NT_QUERY_SYSTEM_INFORMATION,
+		STRING_NT_QUERY_SYSTEM_INFORMATION_LEN,
+		strNtQuerySystemInformation);
+
+	static CHAR strInitializeProcThreadAttributeList[STRING_INITIALIZE_PROC_THREAD_ATTRIBUTE_LIST_LEN + 1] = ""; // "InitializeProcThreadAttributeList"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_INITIALIZE_PROC_THREAD_ATTRIBUTE_LIST,
+		STRING_INITIALIZE_PROC_THREAD_ATTRIBUTE_LIST_LEN,
+		strInitializeProcThreadAttributeList);
+
+	static CHAR strUpdateProcThreadAttribute[STRING_UPDATE_PROC_THREAD_ATTRIBUTE_LEN + 1] = ""; // "UpdateProcThreadAttribute"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_UPDATE_PROC_THREAD_ATTRIBUTE,
+		STRING_UPDATE_PROC_THREAD_ATTRIBUTE_LEN,
+		strUpdateProcThreadAttribute);
+
+	static CHAR strOpenProcess[STRING_OPEN_PROCESS_LEN + 1] = ""; // "OpenProcess"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_OPEN_PROCESS,
+		STRING_OPEN_PROCESS_LEN,
+		strOpenProcess);
+
+	static CHAR strDeleteProcThreadAttributeList[STRING_DELETE_PROC_THREAD_ATTRIBUTE_LIST_LEN + 1] = ""; // "DeleteProcThreadAttributeList"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_DELETE_PROC_THREAD_ATTRIBUTE_LIST,
+		STRING_DELETE_PROC_THREAD_ATTRIBUTE_LIST_LEN,
+		strDeleteProcThreadAttributeList);
+
+	static CHAR strGetEnvironmentVariableA[STRING_GET_ENVIRONMENT_VARIABLE_A_LEN + 1] = ""; // "GetEnvironmentVariableA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_ENVIRONMENT_VARIABLE_A,
+		STRING_GET_ENVIRONMENT_VARIABLE_A_LEN,
+		strGetEnvironmentVariableA);
+
+	static CHAR strResumeThread[STRING_RESUME_THREAD_LEN + 1] = ""; // "ResumeThread"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_RESUME_THREAD,
+		STRING_RESUME_THREAD_LEN,
+		strResumeThread);
+
+	static CHAR strReadProcessMemory[STRING_READ_PROCESS_MEMORY_LEN + 1] = ""; // "ReadProcessMemory"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_READ_PROCESS_MEMORY,
+		STRING_READ_PROCESS_MEMORY_LEN,
+		strReadProcessMemory);
+
+	static CHAR strWriteProcessMemory[STRING_WRITE_PROCESS_MEMORY_LEN + 1] = ""; // "WriteProcessMemory"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_WRITE_PROCESS_MEMORY,
+		STRING_WRITE_PROCESS_MEMORY_LEN,
+		strWriteProcessMemory);
+
+	static CHAR strCreateProcessA[STRING_CREATE_PROCESS_A_LEN + 1] = ""; // "CreateProcessA"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_CREATE_PROCESS_A,
+		STRING_CREATE_PROCESS_A_LEN,
+		strCreateProcessA);
+
+	static CHAR strNtQueryInformationProcess[STRING_NT_QUERY_INFORMATION_PROCESS_LEN + 1] = ""; // "NtQueryInformationProcess"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_NT_QUERY_INFORMATION_PROCESS,
+		STRING_NT_QUERY_INFORMATION_PROCESS_LEN,
+		strNtQueryInformationProcess);
+
+	static CHAR strTerminateProcess[STRING_TERMINATE_PROCESS_LEN + 1] = ""; // "TerminateProcess"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_TERMINATE_PROCESS,
+		STRING_TERMINATE_PROCESS_LEN,
+		strTerminateProcess);
+
+	static CHAR strOpenThread[STRING_OPEN_THREAD_LEN + 1] = ""; // "OpenThread"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_OPEN_THREAD,
+		STRING_OPEN_THREAD_LEN,
+		strOpenThread);
+
+	static CHAR strSuspendThread[STRING_SUSPEND_THREAD_LEN + 1] = ""; // "SuspendThread"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_SUSPEND_THREAD,
+		STRING_SUSPEND_THREAD_LEN,
+		strSuspendThread);
+
+	static CHAR strDuplicateHandle[STRING_DUPLICATE_HANDLE_LEN + 1] = ""; // "DuplicateHandle"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_DUPLICATE_HANDLE,
+		STRING_DUPLICATE_HANDLE_LEN,
+		strDuplicateHandle);
+
+	static CHAR strNtQueueApcThread[STRING_NT_QUEUE_APC_THREAD_LEN + 1] = ""; // "NtQueueApcThread"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_NT_QUEUE_APC_THREAD,
+		STRING_NT_QUEUE_APC_THREAD_LEN,
+		strNtQueueApcThread);
+
+	static CHAR strNtTestAlert[STRING_NT_TEST_ALERT_LEN + 1] = ""; // "NtTestAlert"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_NT_TEST_ALERT,
+		STRING_NT_TEST_ALERT_LEN,
+		strNtTestAlert);
+
+	static CHAR strCreateRemoteThread[STRING_CREATE_REMOTE_THREAD_LEN + 1] = ""; // "CreateRemoteThread"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_CREATE_REMOTE_THREAD,
+		STRING_CREATE_REMOTE_THREAD_LEN,
+		strCreateRemoteThread);
+
+	static CHAR strMapViewOfFile2[STRING_MAP_VIEW_OF_FILE2_LEN + 1] = ""; // "MapViewOfFile2"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_MAP_VIEW_OF_FILE2,
+		STRING_MAP_VIEW_OF_FILE2_LEN,
+		strMapViewOfFile2);
+
+	static CHAR strGetProcAddress[STRING_GET_PROC_ADDRESS_LEN + 1] = ""; // "GetProcAddress"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_GET_PROC_ADDRESS,
+		STRING_GET_PROC_ADDRESS_LEN,
+		strGetProcAddress);
+
+	static CHAR strVirtualProtectEx[STRING_VIRTUAL_PROTECT_EX_LEN + 1] = ""; // "VirtualProtectEx"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_VIRTUAL_PROTECT_EX,
+		STRING_VIRTUAL_PROTECT_EX_LEN,
+		strVirtualProtectEx);
+
+	static CHAR strVirtualAllocEx[STRING_VIRTUAL_ALLOC_EX_LEN + 1] = ""; // "VirtualAllocEx"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_VIRTUAL_ALLOC_EX,
+		STRING_VIRTUAL_ALLOC_EX_LEN,
+		strVirtualAllocEx);
+
+	static CHAR strVirtualFree[STRING_VIRTUAL_FREE_LEN + 1] = ""; // "VirtualFree"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_VIRTUAL_FREE,
+		STRING_VIRTUAL_FREE_LEN,
+		strVirtualFree);
+
+	static CHAR strRtlAddFunctionTable[STRING_RTL_ADD_FUNCTION_TABLE_LEN + 1] = ""; // "RtlAddFunctionTable"
+	DeobfuscateUtf8String(
+		(PCHAR)STRING_RTL_ADD_FUNCTION_TABLE,
+		STRING_RTL_ADD_FUNCTION_TABLE_LEN,
+		strRtlAddFunctionTable);
+
 	// Load necessary modules
 	loadedModules.hNtdll = LoadLibraryCustom(strNtdllDll);
 	loadedModules.hKernelbase = LoadLibraryCustom(strKernelbaseDll);
@@ -640,6 +785,30 @@ WinApiCustom::WinApiCustom()
 	loadedFunctions.RemoveDirectoryA = (BOOL(*)(LPCSTR lpPathName))GetProcAddressCustom(loadedModules.hKernel32, strRemoveDirectoryA);
 	loadedFunctions.HeapValidate = (BOOL(*)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem))GetProcAddressCustom(loadedModules.hKernel32, strHeapValidate);
 	loadedFunctions.ConvertSidToStringSidA = (BOOL(*)(PSID Sid, LPSTR * StringSid)) GetProcAddressCustom(loadedModules.hAdvapi32, strConvertSidToStringSidA);
+	loadedFunctions.NtQuerySystemInformation = (NTSTATUS(*)(SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength))GetProcAddressCustom(hNtdll, strNtQuerySystemInformation);
+	loadedFunctions.GetEnvironmentVariableA = (DWORD(*)(LPCSTR lpName, LPSTR lpBuffer, DWORD nSize))GetProcAddressCustom(loadedModules.hKernel32, strGetEnvironmentVariableA);
+	loadedFunctions.OpenProcess = (HANDLE(*)(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId))GetProcAddressCustom(loadedModules.hKernel32, strOpenProcess);
+	loadedFunctions.CreateProcessA = (BOOL(*)(LPCSTR lpApplicationName, LPSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCSTR lpCurrentDirectory, LPSTARTUPINFOA lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation))GetProcAddressCustom(loadedModules.hKernel32, strCreateProcessA);
+	loadedFunctions.InitializeProcThreadAttributeList = (BOOL(*)(LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList, DWORD dwAttributeCount, DWORD dwFlags, PSIZE_T lpSize))GetProcAddressCustom(loadedModules.hKernel32, strInitializeProcThreadAttributeList);
+	loadedFunctions.UpdateProcThreadAttribute = (BOOL(*)(LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList, DWORD dwFlags, DWORD_PTR Attribute, PVOID lpValue, SIZE_T cbSize, PVOID lpPreviousValue, PSIZE_T lpReturnSize))GetProcAddressCustom(loadedModules.hKernel32, strUpdateProcThreadAttribute);
+	loadedFunctions.DeleteProcThreadAttributeList = (void (*)(LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList))GetProcAddressCustom(loadedModules.hKernel32, strDeleteProcThreadAttributeList);
+	loadedFunctions.ReadProcessMemory = (BOOL(*)(HANDLE hProcess, LPCVOID lpBaseAddress, LPVOID lpBuffer, SIZE_T nSize, SIZE_T * lpNumberOfBytesRead)) GetProcAddressCustom(loadedModules.hKernel32, strReadProcessMemory);
+	loadedFunctions.WriteProcessMemory = (BOOL(*)(HANDLE hProcess, LPVOID lpBaseAddress, LPCVOID lpBuffer, SIZE_T nSize, SIZE_T * lpNumberOfBytesWritten)) GetProcAddressCustom(loadedModules.hKernel32, strWriteProcessMemory);
+	loadedFunctions.NtQueryInformationProcess = (NTSTATUS(*)(HANDLE ProcessHandle, PROCESSINFOCLASS ProcessInformationClass, PVOID ProcessInformation, ULONG ProcessInformationLength, PULONG ReturnLength))GetProcAddressCustom(loadedModules.hNtdll, strNtQueryInformationProcess);
+	loadedFunctions.TerminateProcess = (BOOL(*)(HANDLE hProcess, UINT uExitCode))GetProcAddressCustom(loadedModules.hKernel32, strTerminateProcess);
+	loadedFunctions.OpenThread = (HANDLE(*)(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwThreadId))(loadedModules.hKernel32, strOpenThread);
+	loadedFunctions.SuspendThread = (DWORD(*)(HANDLE hThread))GetProcAddressCustom(loadedModules.hKernel32, strSuspendThread);
+	loadedFunctions.ResumeThread = (DWORD(*)(HANDLE hThread))GetProcAddressCustom(loadedModules.hKernel32, strResumeThread);
+	loadedFunctions.DuplicateHandle = (BOOL(*)(HANDLE hSourceProcessHandle, HANDLE hSourceHandle, HANDLE hTargetProcessHandle, LPHANDLE lpTargetHandle, DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwOptions))GetProcAddressCustom(loadedModules.hKernel32, strDuplicateHandle);
+	loadedFunctions.NtQueueApcThread = (NTSTATUS(*)(HANDLE ThreadHandle, PIO_APC_ROUTINE ApcRoutine, PVOID ApcRoutineContext OPTIONAL, PIO_STATUS_BLOCK ApcStatusBlock OPTIONAL, ULONG ApcReserved OPTIONAL))GetProcAddressCustom(loadedModules.hNtdll, strNtQueueApcThread);
+	loadedFunctions.NtTestAlert = (NTSTATUS(*)())GetProcAddressCustom(loadedModules.hNtdll, strNtTestAlert);
+	loadedFunctions.CreateRemoteThread = (HANDLE(*)(HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId))GetProcAddressCustom(loadedModules.hKernel32, strCreateRemoteThread);
+	loadedFunctions.MapViewOfFile2 = (PVOID(*)(HANDLE FileMappingHandle, HANDLE ProcessHandle, ULONG64 Offset, PVOID BaseAddress, SIZE_T ViewSize, ULONG AllocationType, ULONG PageProtection))GetProcAddressCustom(loadedModules.hKernel32, strMapViewOfFile2);
+	loadedFunctions.GetProcAddress = (FARPROC(*)(HMODULE hModule, LPCSTR lpProcName))GetProcAddressCustom(loadedModules.hKernel32, strGetProcAddress);
+	loadedFunctions.VirtualProtectEx = (BOOL(*)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect))GetProcAddressCustom(loadedModules.hKernel32, strVirtualProtectEx);
+	loadedFunctions.VirtualAllocEx = (LPVOID(*)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect))GetProcAddressCustom(loadedModules.hKernel32, strVirtualAllocEx);
+	loadedFunctions.VirtualFree = (BOOL(*)(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType))GetProcAddressCustom(loadedModules.hKernel32, strVirtualFree);
+	loadedFunctions.RtlAddFunctionTable = (BOOLEAN(*)(PRUNTIME_FUNCTION FunctionTable, DWORD EntryCount, DWORD64 BaseAddress))GetProcAddressCustom(loadedModules.hKernel32, strRtlAddFunctionTable);
 }
 
 /* Destructor for WinApiCustom */
@@ -699,9 +868,15 @@ HANDLE WinApiCustom::CreateMutexCustom()
 }
 
 /* Get current process handle */
-HANDLE WinApiCustom::GetCurrentProcessHandle()
+inline HANDLE WinApiCustom::GetCurrentProcessHandlePseudo()
 {
 	return (HANDLE)-1;
+}
+
+/* Get current thread's pseudo handle */
+inline HANDLE WinApiCustom::GetCurrentThreadHandlePseudo()
+{
+	return (HANDLE)-2;
 }
 
 /*
@@ -709,14 +884,14 @@ Get current user name wrapper
 
 Returned double-pointers point to buffers that must be manually freed
 */
-void WinApiCustom::GetCurrentUserCustom(OUT CHAR** ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName)
+void WinApiCustom::GetCurrentUserCustom(OUT CHAR **ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName)
 {
 	// Initialise data
 	HANDLE hCurrentProcessToken = NULL;
 
 	// Get handle to current process's token
 	this->loadedFunctions.OpenProcessToken(
-		this->GetCurrentProcessHandle(),
+		this->GetCurrentProcessHandlePseudo(),
 		TOKEN_QUERY,
 		&hCurrentProcessToken);
 	if (hCurrentProcessToken == NULL)

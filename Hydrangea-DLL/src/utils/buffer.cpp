@@ -137,13 +137,33 @@ void MemsetCustom(IN LPVOID pBuf, IN DWORD bufSize, IN BYTE fillByte)
     }
 }
 
+/* Convert a UTF-8 string to all lowercase */
+void Utf8StringToLower(IN PCHAR strIn, IN OUT PCHAR strOut)
+{
+    int stringLen = StrLen(strIn);
+    BYTE currentChar = 0;
+    for (int i = 0; i < stringLen; i++)
+    {
+        currentChar = BYTE(strIn[i]);
+        if (currentChar >= 0x41 && currentChar <= 0x5A)
+        {
+            strOut[i] = currentChar + 0x20;
+        }
+    }
+}
+
 /* Convert a UTF-16LE string to all lowercase */
 void WideStringToLower(IN PWCHAR strIn, IN OUT PWCHAR strOut)
 {
     int stringLen = StrLenW(strIn);
+    BYTE currentChar = 0;
     for (int i = 0; i < stringLen; i++)
     {
-        strOut[i] = towlower(strIn[i]);
+        currentChar = BYTE(strIn[i]);
+        if (currentChar >= 0x41 && currentChar <= 0x5A)
+        {
+            strOut[i] = currentChar + 0x20;
+        }
     }
 }
 

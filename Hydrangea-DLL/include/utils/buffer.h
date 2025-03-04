@@ -12,6 +12,7 @@ DWORD StrLen(IN PCHAR strIn);
 DWORD StrLenW(IN PWCHAR strIn);
 void RtlZeroMemoryCustom(IN PBYTE pBuf, IN DWORD bufSize);
 void MemsetCustom(IN LPVOID pBuf, IN DWORD bufSize, IN BYTE fillByte);
+void Utf8StringToLower(IN PCHAR strIn, IN OUT PCHAR strOut);
 void WideStringToLower(IN PWCHAR strIn, IN OUT PWCHAR strOut);
 DWORD Utf8ToWideString(IN PCHAR strIn, OUT PWCHAR strOut);
 DWORD WideStringToUtf8(IN PWCHAR strIn, OUT PCHAR strOut);

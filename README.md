@@ -78,15 +78,23 @@ If new tasks don't exist, no message is returned from Listener.
 
 ## Capabilities
 
-Agent capabilities are things that they can be tasked with. These must be invoked from the Hydrangea Client.
+Agent capabilities are things that they can be tasked with. These must be invoked from the Hydrangea Client. Type `help` on the Client to see usage.
 
-The Client formats these commands to be null-separated. This allows individual parameters to have any special characters, including ", ', space, etc.
+The Client formats these commands to be null-separated. This allows individual parameters to have any special characters, including ", ', space, etc. Some commands are modified on the fly as needed, to make it more convenient. For example, `UPLOAD`'s PATH argument is substituted with the file contents.
+
+Below reference is for the Hydrangea Agent side of things. In most cases, they are the same for Hydrangea Client side too.
 
 ### Windows
 
+**Control**
+
 ```
 EXIT
-MESSAGEBOX TITLE BODY
+```
+
+**Filesystem**
+
+```
 PWD
 CD DIR_PATH
 CP SOURCE DESTINATION
@@ -98,4 +106,57 @@ UPLOAD FILE_BYTES_B64 /PATH/TO/FILE/ON/TARGET
 DOWNLOAD /PATH/TO/FILE/ON/CLIENT
 CAT /PATH/TO/FILE
 MKDIR DIR_NAME
+```
+
+**Process**
+
+```
+PS
+PS_SEARCH SEARCH_TERM
+PS_NEW PPID COMMANDLINE ARGS
+PS_RESUME PID
+PS_KILL PID
+PS_INJECT_SHELLCODE <PID|SELF> SHELLCODE_B64
+PS_LOAD_DLL_MEM <PID|SELF> DLL_B64
+PS_LOAD_DLL_FILE <PID|SELF> DLL_PATH
+PS_INJECT_PE <PID>
+PS_KEYLOGGER_START PID
+PS_KEYLOGGER_STOP PID
+```
+
+**Service**
+
+```
+SC_LIST
+SC_SEARCH SEARCH_TERM
+SC_NEW NAME EXECUTABLE_PATH START_TYPE
+SC_DEL NAME
+SC_START NAME
+SC_STOP NAME
+SC_RESTART NAME
+```
+
+**Registry**
+
+```
+REG_LS KEY_PATH
+REG_ADD_SUBKEY KEY_PATH KEY_NAME
+REG_ADD_PROPERTY KEY_PATH PROPERTY_NAME PROPERTY_TYPE PROPERTY_VALUE
+REG_DEL_KEY KEY_PATH
+REG_DEL_PROPERTY KEY_PATH PROPERTY_NAME
+```
+
+**Scheduled task**
+
+```
+SCHTASKS_LIST
+SCHTASKS_NEW NAME EXECUTABLE
+SCHTASKS_DEL NAME
+```
+
+**Miscellaneous**
+
+```
+MESSAGEBOX TITLE BODY
+SCREENSHOT
 ```

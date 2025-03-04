@@ -32,7 +32,43 @@ typedef enum _SECURABLE_OBJECT_TYPE_CUSTOM
     ACCESS_TOKEN
 } SECURABLE_OBJECT_TYPE_CUSTOM;
 
-// Struct to store AccessMask parsed values; https://learn.microsoft.com/en-us/windows/win32/secauthz/access-rights-and-access-masks
+//////////
+// STRUCTS
+//////////
+
+// For PE loader
+typedef struct _PE_LOADER_PROCESS_PARAM_STORE
+{
+    WORD commandlineLenOrig;
+    PWCHAR commandlineOrig;
+} PE_LOADER_PROCESS_PARAM_STORE, *PPE_LOADER_PROCESS_PARAM_STORE;
+
+typedef struct _PE_LOADER_IMAGE_FILE_DETAILS
+{
+    IMAGE_FILE_HEADER FileHeader;
+    IMAGE_OPTIONAL_HEADER OptionalHeader;
+
+    BOOL IsDll;
+    DWORD64 ImageBase; // absolute
+    DWORD SizeOfImage;
+    DWORD AddressOfEntryPointOffset; // relative
+
+    WORD NumOfSections;
+    PIMAGE_SECTION_HEADER SectionHeaderFirst; // absolute
+
+    PIMAGE_DATA_DIRECTORY pDataDirectoryExport;
+    PIMAGE_DATA_DIRECTORY pDataDirectoryImport;
+    PIMAGE_DATA_DIRECTORY pDataDirectoryReloc;
+    PIMAGE_DATA_DIRECTORY pDataDirectoryException;
+} PE_LOADER_IMAGE_FILE_DETAILS, *PPE_LOADER_IMAGE_FILE_DETAILS;
+
+typedef struct _IMAGE_BASE_RELOCATION_ENTRY
+{
+    WORD Offset : 12;
+    WORD Type : 4;
+} IMAGE_BASE_RELOCATION_ENTRY, *PIMAGE_BASE_RELOCATION_ENTRY;
+
+// AccessMask parsed values; https://learn.microsoft.com/en-us/windows/win32/secauthz/access-rights-and-access-masks
 typedef struct _ACCESS_MASK_CUSTOM
 {
     /* Specific rights - files & directories; https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/access-mask */
@@ -245,7 +281,37 @@ struct LoadedFunctions
     BOOL (*RemoveDirectoryA)(LPCSTR lpPathName);
     BOOL (*HeapValidate)(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
     BOOL (*ConvertSidToStringSidA)(PSID Sid, LPSTR *StringSid);
+    NTSTATUS (*NtQuerySystemInformation)(SYSTEM_INFORMATION_CLASS SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength);
+    DWORD (*GetEnvironmentVariableA)(LPCSTR lpName, LPSTR lpBuffer, DWORD nSize);
+    HANDLE (*OpenProcess)(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId);
+    BOOL (*CreateProcessA)(LPCSTR lpApplicationName, LPSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCSTR lpCurrentDirectory, LPSTARTUPINFOA lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation);
+    BOOL (*InitializeProcThreadAttributeList)(LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList, DWORD dwAttributeCount, DWORD dwFlags, PSIZE_T lpSize);
+    BOOL (*UpdateProcThreadAttribute)(LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList, DWORD dwFlags, DWORD_PTR Attribute, PVOID lpValue, SIZE_T cbSize, PVOID lpPreviousValue, PSIZE_T lpReturnSize);
+    void (*DeleteProcThreadAttributeList)(LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList);
+    HANDLE (*OpenThread)(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwThreadId);
+    DWORD (*SuspendThread)(HANDLE hThread);
+    DWORD (*ResumeThread)(HANDLE hThread);
+    BOOL (*ReadProcessMemory)(HANDLE hProcess, LPCVOID lpBaseAddress, LPVOID lpBuffer, SIZE_T nSize, SIZE_T *lpNumberOfBytesRead);
+    BOOL (*WriteProcessMemory)(HANDLE hProcess, LPVOID lpBaseAddress, LPCVOID lpBuffer, SIZE_T nSize, SIZE_T *lpNumberOfBytesWritten);
+    NTSTATUS (*NtQueryInformationProcess)(HANDLE ProcessHandle, PROCESSINFOCLASS ProcessInformationClass, PVOID ProcessInformation, ULONG ProcessInformationLength, PULONG ReturnLength);
+    BOOL (*TerminateProcess)(HANDLE hProcess, UINT uExitCode);
+    BOOL (*DuplicateHandle)(HANDLE hSourceProcessHandle, HANDLE hSourceHandle, HANDLE hTargetProcessHandle, LPHANDLE lpTargetHandle, DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwOptions);
+    NTSTATUS (*NtQueueApcThread)(HANDLE ThreadHandle, PIO_APC_ROUTINE ApcRoutine, PVOID ApcRoutineContext OPTIONAL, PIO_STATUS_BLOCK ApcStatusBlock OPTIONAL, ULONG ApcReserved OPTIONAL);
+    NTSTATUS (*NtTestAlert)();
+    HANDLE (*CreateRemoteThread)(HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
+    PVOID (*MapViewOfFile2)(HANDLE FileMappingHandle, HANDLE ProcessHandle, ULONG64 Offset, PVOID BaseAddress, SIZE_T ViewSize, ULONG AllocationType, ULONG PageProtection);
+    FARPROC (*GetProcAddress)(HMODULE hModule, LPCSTR lpProcName);
+    BOOL (*VirtualProtectEx)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);
+    LPVOID (*VirtualAllocEx)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
+    BOOL (*VirtualFree)(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
+    BOOLEAN (*RtlAddFunctionTable)(PRUNTIME_FUNCTION FunctionTable, DWORD EntryCount, DWORD64 BaseAddress);
 };
+
+/* Helper functions for WinApiCustom */
+HMODULE GetModuleHandleCustom(PCHAR moduleName);
+PVOID GetProcAddressCustom(HMODULE hModule, PCHAR procName);
+HMODULE LoadLibraryCustom(IN PCHAR moduleName);
+DWORD FreeLibraryCustom(IN HMODULE hModule);
 
 /* Class for WinAPI functions */
 class WinApiCustom
@@ -269,9 +335,10 @@ public:
     HANDLE CreateThreadCustom(LPTHREAD_START_ROUTINE pThreadFunc, LPVOID pThreadFuncParams);
     HANDLE CreateMutexCustom();
     LPVOID GetFQDNComputer();
-    HANDLE GetCurrentProcessHandle();
+    inline HANDLE GetCurrentProcessHandlePseudo();
+    inline HANDLE GetCurrentThreadHandlePseudo();
     void DescribeSid(IN PSID pSid, OUT CHAR **ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName);
-    void GetCurrentUserCustom(OUT CHAR** ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName);
+    void GetCurrentUserCustom(OUT CHAR **ppSidString, OUT CHAR **ppUserName, OUT CHAR **ppDomainName);
     PCHAR GetCurrentWorkingDirectoryCustom();
     BOOL ChangeCurrentWorkingDirectoryCustom(PCHAR dirPath);
     LPVOID ReadFileCustom(IN PCHAR filePath, OUT PDWORD64 pNumOfBytesRead);
@@ -288,4 +355,19 @@ public:
     BOOL MoveFileCustom(PCHAR sourcePath, PCHAR destPath);
     BOOL DeleteFileOrDirCustom(PCHAR filePath);
     BOOL ShredFileCustom(PCHAR filePath, DWORD cycles);
+    void GetSystem32Directory(CHAR **ppOutput);
+    void GetProcessAll(OUT ULONG *pProcessInformationSizeWritten, OUT SYSTEM_PROCESS_INFORMATION **ppSystemProcessInformation);
+    PPEB GetPebOfProcess(IN HANDLE hTargetProcess);
+    PSYSTEM_PROCESS_INFORMATION ProcessSearchWithName(PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, PWCHAR targetProcessName);
+    PSYSTEM_PROCESS_INFORMATION ProcessSearchWithId(PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, DWORD targetProcessId);
+    BOOL CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommandLineArgs, IN DWORD parentProcessId, IN PCHAR pCurrentDirectory, IN BOOL createSuspended, IN BOOL createHidden, OUT PPROCESS_INFORMATION pProcessInformation);
+    PRTL_USER_PROCESS_PARAMETERS GetProcessParameters(IN HANDLE hProcess, OUT RTL_USER_PROCESS_PARAMETERS **ppProcessParametersInTargetProcess);
+    void DescribeProcessListing(IN PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, OUT PCHAR pOutput, OUT PDWORD pOutputSize);
+    BOOL ProcessSuspendResume(DWORD targetProcessId, BOOL toResume);
+    BOOL ProcessTerminate(DWORD processId);
+    void GetCurrentThreadHandleActual(OUT PHANDLE phThread);
+    BOOL ProcessInjectShellcodeSelf(BOOL createNewThread, LPVOID pShellcode, DWORD shellcodeSize);
+    BOOL ProcessInjectShellcodeRemote(HANDLE hTargetProcess, HANDLE hTargetThread, BOOL isTargetAlreadyAlertable, LPVOID pShellcode, DWORD shellcodeSize);
+    void InjectPELocal(LPVOID pPeContent, DWORD peContentSize, PCHAR pInMemPeArgs, BOOL createNewThread, BOOL waitForNewThread);
+    void InjectDllLocal(BOOL useCustomLoader, PCHAR pDllPath, LPVOID pDllContents, DWORD64 dllContentsSize, PCHAR pFunctionToInvokeName, LPVOID pFunctionToInvokeArgs, BOOL createNewThread, BOOL waitForNewThread);
 };

