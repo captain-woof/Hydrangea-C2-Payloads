@@ -18,6 +18,10 @@ PVOID GetProcAddressCustom(HMODULE hModule, PCHAR procName);
 HMODULE LoadLibraryCustom(IN PCHAR moduleName);
 DWORD FreeLibraryCustom(IN HMODULE hModule);
 
+////////
+// ENUMS
+////////
+
 // Enum for Type of securable object
 typedef enum _SECURABLE_OBJECT_TYPE_CUSTOM
 {
@@ -36,7 +40,132 @@ typedef enum _SECURABLE_OBJECT_TYPE_CUSTOM
 // STRUCTS
 //////////
 
-// For PE loader
+/*
+Following elements require manual freeing - ImageName, CommandLine
+*/
+typedef struct _SYSTEM_PROCESS_INFORMATION_DETAILED
+{
+    PCHAR ImageName;
+    ULONG SessionId;
+    DWORD ProcessId;
+    SIZE_T VirtualSize;
+    BOOL IsProtectedProcess;
+    PCHAR CommandLine;
+    SID sidOwner;
+    SID sidGroup;
+} SYSTEM_PROCESS_INFORMATION_DETAILED, *PSYSTEM_PROCESS_INFORMATION_DETAILED;
+
+typedef struct _PEB_FREE_BLOCK
+{
+    _PEB_FREE_BLOCK *Next;
+    ULONG Size;
+} PEB_FREE_BLOCK, *PPEB_FREE_BLOCK;
+
+struct _ACTIVATION_CONTEXT
+{
+};
+
+struct _ACTIVATION_CONTEXT_DATA
+{
+};
+
+struct _ASSEMBLY_STORAGE_MAP
+{
+};
+
+struct _FLS_CALLBACK_INFO
+{
+};
+
+typedef struct _PEB_DETAILED
+{
+    UCHAR InheritedAddressSpace;
+    UCHAR ReadImageFileExecOptions;
+    UCHAR BeingDebugged;
+    UCHAR BitField;
+    ULONG ImageUsesLargePages : 1;
+    ULONG IsProtectedProcess : 1;
+    ULONG IsLegacyProcess : 1;
+    ULONG IsImageDynamicallyRelocated : 1;
+    ULONG SpareBits : 4;
+    PVOID Mutant;
+    PVOID ImageBaseAddress;
+    PPEB_LDR_DATA Ldr;
+    PRTL_USER_PROCESS_PARAMETERS ProcessParameters;
+    PVOID SubSystemData;
+    PVOID ProcessHeap;
+    PRTL_CRITICAL_SECTION FastPebLock;
+    PVOID AtlThunkSListPtr;
+    PVOID IFEOKey;
+    ULONG CrossProcessFlags;
+    ULONG ProcessInJob : 1;
+    ULONG ProcessInitializing : 1;
+    ULONG ReservedBits0 : 30;
+    union
+    {
+        PVOID KernelCallbackTable;
+        PVOID UserSharedInfoPtr;
+    };
+    ULONG SystemReserved[1];
+    ULONG SpareUlong;
+    PPEB_FREE_BLOCK FreeList;
+    ULONG TlsExpansionCounter;
+    PVOID TlsBitmap;
+    ULONG TlsBitmapBits[2];
+    PVOID ReadOnlySharedMemoryBase;
+    PVOID HotpatchInformation;
+    VOID **ReadOnlyStaticServerData;
+    PVOID AnsiCodePageData;
+    PVOID OemCodePageData;
+    PVOID UnicodeCaseTableData;
+    ULONG NumberOfProcessors;
+    ULONG NtGlobalFlag;
+    LARGE_INTEGER CriticalSectionTimeout;
+    ULONG HeapSegmentReserve;
+    ULONG HeapSegmentCommit;
+    ULONG HeapDeCommitTotalFreeThreshold;
+    ULONG HeapDeCommitFreeBlockThreshold;
+    ULONG NumberOfHeaps;
+    ULONG MaximumNumberOfHeaps;
+    VOID **ProcessHeaps;
+    PVOID GdiSharedHandleTable;
+    PVOID ProcessStarterHelper;
+    ULONG GdiDCAttributeList;
+    PRTL_CRITICAL_SECTION LoaderLock;
+    ULONG OSMajorVersion;
+    ULONG OSMinorVersion;
+    WORD OSBuildNumber;
+    WORD OSCSDVersion;
+    ULONG OSPlatformId;
+    ULONG ImageSubsystem;
+    ULONG ImageSubsystemMajorVersion;
+    ULONG ImageSubsystemMinorVersion;
+    ULONG ImageProcessAffinityMask;
+    ULONG GdiHandleBuffer[34];
+    PVOID PostProcessInitRoutine;
+    PVOID TlsExpansionBitmap;
+    ULONG TlsExpansionBitmapBits[32];
+    ULONG SessionId;
+    ULARGE_INTEGER AppCompatFlags;
+    ULARGE_INTEGER AppCompatFlagsUser;
+    PVOID pShimData;
+    PVOID AppCompatInfo;
+    UNICODE_STRING CSDVersion;
+    _ACTIVATION_CONTEXT_DATA *ActivationContextData;
+    _ASSEMBLY_STORAGE_MAP *ProcessAssemblyStorageMap;
+    _ACTIVATION_CONTEXT_DATA *SystemDefaultActivationContextData;
+    _ASSEMBLY_STORAGE_MAP *SystemAssemblyStorageMap;
+    ULONG MinimumStackCommit;
+    _FLS_CALLBACK_INFO *FlsCallback;
+    LIST_ENTRY FlsListHead;
+    PVOID FlsBitmap;
+    ULONG FlsBitmapBits[4];
+    ULONG FlsHighIndex;
+    PVOID WerRegistrationData;
+    PVOID WerShipAssertPtr;
+} PEB_DETAILED, *PPEB_DETAILED;
+
+// For local PE loader
 typedef struct _PE_LOADER_PROCESS_PARAM_STORE
 {
     WORD commandlineLenOrig;
@@ -299,12 +428,18 @@ struct LoadedFunctions
     NTSTATUS (*NtQueueApcThread)(HANDLE ThreadHandle, PIO_APC_ROUTINE ApcRoutine, PVOID ApcRoutineContext OPTIONAL, PIO_STATUS_BLOCK ApcStatusBlock OPTIONAL, ULONG ApcReserved OPTIONAL);
     NTSTATUS (*NtTestAlert)();
     HANDLE (*CreateRemoteThread)(HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
-    PVOID (*MapViewOfFile2)(HANDLE FileMappingHandle, HANDLE ProcessHandle, ULONG64 Offset, PVOID BaseAddress, SIZE_T ViewSize, ULONG AllocationType, ULONG PageProtection);
     FARPROC (*GetProcAddress)(HMODULE hModule, LPCSTR lpProcName);
     BOOL (*VirtualProtectEx)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);
     LPVOID (*VirtualAllocEx)(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
     BOOL (*VirtualFree)(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);
     BOOLEAN (*RtlAddFunctionTable)(PRUNTIME_FUNCTION FunctionTable, DWORD EntryCount, DWORD64 BaseAddress);
+    PVOID (*MapViewOfFile3)(HANDLE FileMapping, HANDLE Process, PVOID BaseAddress, ULONG64 Offset, SIZE_T ViewSize, ULONG AllocationType, ULONG PageProtection, MEM_EXTENDED_PARAMETER *ExtendedParameters, ULONG ParameterCount);
+    BOOL (*CreatePipe)(PHANDLE hReadPipe, PHANDLE hWritePipe, LPSECURITY_ATTRIBUTES lpPipeAttributes, DWORD nSize);
+    DWORD (*GetTempPath2A)(DWORD BufferLength, LPSTR Buffer);
+    BOOL (*SetFileInformationByHandle)(HANDLE hFile, FILE_INFO_BY_HANDLE_CLASS FileInformationClass, LPVOID lpFileInformation, DWORD dwBufferSize);
+    BOOL (*ReadFile)(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
+    BOOL (*SetThreadContext)(HANDLE hThread, const CONTEXT *lpContext);
+    BOOL (*GetThreadContext)(HANDLE hThread, LPCONTEXT lpContext);
 };
 
 /* Helper functions for WinApiCustom */
@@ -357,12 +492,13 @@ public:
     BOOL ShredFileCustom(PCHAR filePath, DWORD cycles);
     void GetSystem32Directory(CHAR **ppOutput);
     void GetProcessAll(OUT ULONG *pProcessInformationSizeWritten, OUT SYSTEM_PROCESS_INFORMATION **ppSystemProcessInformation);
+    void GetProcessAllDetailed(IN PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, IN Queue *pProcessesDetailedQueue);
     PPEB GetPebOfProcess(IN HANDLE hTargetProcess);
     PSYSTEM_PROCESS_INFORMATION ProcessSearchWithName(PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, PWCHAR targetProcessName);
     PSYSTEM_PROCESS_INFORMATION ProcessSearchWithId(PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, DWORD targetProcessId);
-    BOOL CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommandLineArgs, IN DWORD parentProcessId, IN PCHAR pCurrentDirectory, IN BOOL createSuspended, IN BOOL createHidden, OUT PPROCESS_INFORMATION pProcessInformation);
+    BOOL CreateNewProcessCustom(IN PCHAR pImagePath, IN PCHAR pCommandLineArgs, IN DWORD parentProcessId, IN PCHAR pCurrentDirectory, IN BOOL createSuspended, IN BOOL createHidden, OUT PPROCESS_INFORMATION pProcessInformation, OUT PHANDLE phStdoutRead);
     PRTL_USER_PROCESS_PARAMETERS GetProcessParameters(IN HANDLE hProcess, OUT RTL_USER_PROCESS_PARAMETERS **ppProcessParametersInTargetProcess);
-    void DescribeProcessListing(IN PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, OUT PCHAR pOutput, OUT PDWORD pOutputSize);
+    void DescribeProcessListing(IN PSYSTEM_PROCESS_INFORMATION pSystemProcessInformation, OUT CHAR **ppOutput, OUT PDWORD pOutputSize);
     BOOL ProcessSuspendResume(DWORD targetProcessId, BOOL toResume);
     BOOL ProcessTerminate(DWORD processId);
     void GetCurrentThreadHandleActual(OUT PHANDLE phThread);
@@ -370,4 +506,6 @@ public:
     BOOL ProcessInjectShellcodeRemote(HANDLE hTargetProcess, HANDLE hTargetThread, BOOL isTargetAlreadyAlertable, LPVOID pShellcode, DWORD shellcodeSize);
     void InjectPELocal(LPVOID pPeContent, DWORD peContentSize, PCHAR pInMemPeArgs, BOOL createNewThread, BOOL waitForNewThread);
     void InjectDllLocal(BOOL useCustomLoader, PCHAR pDllPath, LPVOID pDllContents, DWORD64 dllContentsSize, PCHAR pFunctionToInvokeName, LPVOID pFunctionToInvokeArgs, BOOL createNewThread, BOOL waitForNewThread);
+    BOOL InjectPERemote(IN LPVOID pPePayload, IN DWORD pePayloadSize, IN PCHAR imagePath, IN PCHAR commandLineArgs, IN DWORD parentProcessId, IN BOOL createHidden, OUT PPROCESS_INFORMATION pProcessInformation, BOOL waitForProcessOutput, OUT VOID **ppProcessOutput, OUT PDWORD pProcessOutputSize);
+    void ReadOutputFromProcess(IN PHANDLE phStdoutRead, OUT VOID **ppProcessOutput, OUT PDWORD pProcessOutputSize);
 };

@@ -170,12 +170,6 @@ BOOL AssignCorrectPagePerms(WinApiCustom *pWinApiCustom, IN HANDLE hTargetProces
     {
         SectionHeader = pPeImageFileProcessed->SectionHeaderFirst[i];
 
-        /*
-        * TODO:
-        PAGE_EXECUTE_WRITECOPY
-        PAGE_WRITECOPY
-        */
-
         // Get correct permission to set
         if ((SectionHeader.Characteristics & IMAGE_SCN_MEM_EXECUTE) && !(SectionHeader.Characteristics & IMAGE_SCN_MEM_READ) && !(SectionHeader.Characteristics & IMAGE_SCN_MEM_WRITE))
         {
